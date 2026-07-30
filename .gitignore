@@ -1,0 +1,25 @@
+# ---- secrets / env ----
+.env
+.env.*
+!.env.example
+*.local
+
+# ---- node / build ----
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+
+# ---- vercel ----
+.vercel
+
+# ---- supabase cli ----
+supabase/.temp/
+supabase/.branches/
+.supabase/
+
+# ---- os / editor ----
+.DS_Store
+Thumbs.db
+*.log

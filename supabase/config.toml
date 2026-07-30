@@ -1,0 +1,7 @@
+# Minimal Supabase CLI config. Run `supabase init` in an existing project to
+# regenerate a full file; this is enough to link + deploy the function locally.
+project_id = "canopy-densitometer"
+
+[functions.process-capture]
+verify_jwt = false   # PROTOTYPE: the ESP32-CAM calls this with only the anon key.
+                     # For production, gate with a device secret (see README).
