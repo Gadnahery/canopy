@@ -90,10 +90,16 @@ bool startCamera() {
 
 void connectWifi() {
   lcdLine(0, "WiFi connecting"); lcdLine(1, "");
+  Serial.printf("[wifi] connecting to \"%s\" ...\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   uint8_t t = 0;
-  while (WiFi.status() != WL_CONNECTED && t++ < 40) delay(250);
+  while (WiFi.status() != WL_CONNECTED && t++ < 40) { delay(250); Serial.print('.'); }
+  Serial.println();
+  if (WiFi.status() == WL_CONNECTED)
+    Serial.printf("[wifi] connected, IP %s, RSSI %d\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
+  else
+    Serial.println("[wifi] FAILED to connect");
 }
 
 // Upload the JPEG to Storage. Returns the object path (relative to bucket) or "".
@@ -110,6 +116,7 @@ String uploadImage(camera_fb_t* fb) {
   https.addHeader("x-upsert", "true");
 
   int code = https.POST(fb->buf, fb->len);
+  Serial.printf("[upload] HTTP %d\n", code);
   https.end();
   return (code == 200 || code == 201) ? path : "";
 }
@@ -130,30 +137,42 @@ float processCapture(const String& imagePath) {
   String payload; serializeJson(req, payload);
 
   int code = https.POST(payload);
+  Serial.printf("[process] HTTP %d\n", code);
   float pct = -1;
   if (code == 200) {
-    StaticJsonDocument<512> resp;
-    if (!deserializeJson(resp, https.getString()) && resp["ok"] == true) {
+    // Only extract capture.canopy_pct — a filter keeps memory tiny no matter
+    // how many fields the response carries.
+    StaticJsonDocument<64> filter;
+    filter["ok"] = true;
+    filter["capture"]["canopy_pct"] = true;
+    StaticJsonDocument<128> resp;
+    DeserializationError err =
+      deserializeJson(resp, https.getString(), DeserializationOption::Filter(filter));
+    if (err) Serial.printf("[process] json err: %s\n", err.c_str());
+    else if (resp["ok"] == true && !resp["capture"]["canopy_pct"].isNull())
       pct = resp["capture"]["canopy_pct"].as<float>();
-    }
   }
   https.end();
   return pct;
 }
 
 void runCapture() {
+  Serial.println("[capture] button pressed");
   lcdLine(0, "Capturing..."); lcdLine(1, "");
   camera_fb_t* fb = esp_camera_fb_get();
-  if (!fb) { lcdLine(0, "Camera error"); delay(2000); showIdle(); return; }
+  if (!fb) { Serial.println("[capture] esp_camera_fb_get failed"); lcdLine(0, "Camera error"); delay(2000); showIdle(); return; }
+  Serial.printf("[capture] frame %u bytes\n", (unsigned)fb->len);
 
   lcdLine(0, "Uploading...");
   String path = uploadImage(fb);
   esp_camera_fb_return(fb);
-  if (path == "") { lcdLine(0, "Upload failed"); delay(2000); showIdle(); return; }
+  if (path == "") { Serial.println("[upload] FAILED"); lcdLine(0, "Upload failed"); delay(2000); showIdle(); return; }
+  Serial.printf("[upload] ok -> %s\n", path.c_str());
 
   lcdLine(0, "Processing...");
   float pct = processCapture(path);
-  if (pct < 0) { lcdLine(0, "Process failed"); delay(2000); showIdle(); return; }
+  if (pct < 0) { Serial.println("[process] FAILED"); lcdLine(0, "Process failed"); delay(2000); showIdle(); return; }
+  Serial.printf("[process] canopy = %.1f %%\n", pct);
 
   lcdLine(0, "Canopy Cover:");
   lcdLine(1, String(pct, 1) + " %");
@@ -163,18 +182,32 @@ void runCapture() {
 
 void setup() {
   Serial.begin(115200);
+  delay(300);
+  Serial.println("\n\n[canopy] boot");
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   Wire.begin(LCD_SDA, LCD_SCL);
   lcd.init(); lcd.backlight();
   lcdLine(0, "Canopy Densito"); lcdLine(1, "starting...");
 
-  if (!startCamera()) { lcdLine(0, "Cam init FAIL"); lcdLine(1, "check power"); while (true) delay(1000); }
+  if (!startCamera()) {
+    Serial.println("[cam] init FAILED - check 5V power / ribbon cable");
+    lcdLine(0, "Cam init FAIL"); lcdLine(1, "check power");
+    while (true) delay(1000);
+  }
+  Serial.println("[cam] init OK");
   connectWifi();
   if (WiFi.status() != WL_CONNECTED) { lcdLine(0, "WiFi FAIL"); delay(2000); }
+  Serial.println("[canopy] ready - press the capture button (or send 'c' on serial)");
   showIdle();
 }
 
 void loop() {
+  // Serial trigger: send 'c' over USB to capture without the physical button
+  // (handy for bench testing before the button is wired).
+  if (Serial.available()) {
+    char c = Serial.read();
+    if (c == 'c' || c == 'C') runCapture();
+  }
   if (digitalRead(BUTTON_PIN) == LOW) {          // active-low
     delay(40);
     if (digitalRead(BUTTON_PIN) == LOW) {

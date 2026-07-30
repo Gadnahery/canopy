@@ -22,6 +22,9 @@ supabase/.branches/
 # ---- firmware secrets (WiFi password, keys) ----
 firmware/**/secrets.h
 
+# ---- platformio ----
+.pio/
+
 # ---- os / editor ----
 .DS_Store
 Thumbs.db
