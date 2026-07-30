@@ -19,6 +19,9 @@ supabase/.temp/
 supabase/.branches/
 .supabase/
 
+# ---- firmware secrets (WiFi password, keys) ----
+firmware/**/secrets.h
+
 # ---- os / editor ----
 .DS_Store
 Thumbs.db

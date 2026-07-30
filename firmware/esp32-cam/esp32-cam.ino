@@ -19,6 +19,8 @@
 // ---- ARDUINO IDE SETUP -----------------------------------------------------
 //   Board: "AI Thinker ESP32-CAM"   |   PSRAM: Enabled   |   Partition: Huge APP
 //   Libraries: "LiquidCrystal I2C" (Frank de Brabander), ArduinoJson (Blanchon)
+//   Credentials: put WiFi + Supabase values in secrets.h (see secrets.h.example).
+//                Keep secrets.h in this same sketch folder so the IDE compiles it.
 // ============================================================================
 
 #include "esp_camera.h"
@@ -30,12 +32,9 @@
 #include <LiquidCrystal_I2C.h>
 
 // ----------------------------- CONFIG ---------------------------------------
-#define WIFI_SSID      "YOUR_WIFI"
-#define WIFI_PASS      "YOUR_WIFI_PASSWORD"
+// WiFi + Supabase credentials live in secrets.h (copy secrets.h.example first).
+#include "secrets.h"
 
-#define SUPABASE_HOST  "YOURPROJECT.supabase.co"          // no https:// , no path
-#define SUPABASE_ANON  "YOUR_SUPABASE_ANON_KEY"
-#define DEVICE_ID      "canopy-01"
 #define BUCKET         "captures"
 
 #define BUTTON_PIN     13

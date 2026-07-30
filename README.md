@@ -84,7 +84,9 @@ Grab your **Project URL** and **anon key** from *Project Settings → API*.
 Open `firmware/esp32-cam/esp32-cam.ino` in Arduino IDE.
 - Board **AI Thinker ESP32-CAM**, PSRAM **Enabled**, Partition **Huge APP**
 - Install libraries: **LiquidCrystal I2C** (Frank de Brabander), **ArduinoJson**
-- Fill in `WIFI_SSID`, `WIFI_PASS`, `SUPABASE_HOST`, `SUPABASE_ANON`, `DEVICE_ID`
+- Copy `secrets.h.example` → `secrets.h` (same folder) and fill in `WIFI_SSID`,
+  `WIFI_PASS`, `SUPABASE_HOST`, `SUPABASE_ANON`, `DEVICE_ID`.
+  `secrets.h` is gitignored so your WiFi password / keys stay off GitHub.
 - Flash (hold IO0→GND to enter bootloader on bare modules), then reset
 
 ### 3. Web dashboard
