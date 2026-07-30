@@ -1,26 +1,18 @@
 // ============================================================================
-// Canopy Densitometer — ALL-IN-ONE  (AI-Thinker ESP32-CAM)
+// Canopy Densitometer — ESP32-CAM WORKER  (AI-Thinker ESP32-CAM)
 //
-// This single board does everything:
-//   CAPTURE button -> snap photo -> upload JPEG to Supabase Storage
-//                  -> call the process-capture Edge Function
-//                  -> read canopy % from the response -> show on the I2C LCD.
-// The second button is wired to the module's RESET/EN pin (hardware reset only).
+// Two-device design: this board does NO buttons and NO LCD. It just:
+//   1. watches Supabase for a capture row with status 'requested'
+//      (created by the ESP32 board when its button is pressed),
+//   2. takes the photo, uploads the JPEG to Storage,
+//   3. calls the process-capture Edge Function (canopy % is computed there).
+// The ESP32 board polls the same row and shows the result on its LCD.
 //
-// LCD sequence:  "Ready" -> "Capturing..." -> "Uploading..." ->
-//                "Processing..." -> "Canopy: 74.6 %"
+// Only the camera + a 5V/GND supply are needed here. No other wiring.
+// (Serial: send 'r' to insert a test request without the ESP32 board.)
 //
-// ---- WIRING (AI-Thinker ESP32-CAM; SD card NOT used, so its pins are free) --
-//   I2C LCD  SDA -> GPIO15      I2C LCD SCL -> GPIO14      LCD VCC 5V, GND GND
-//   CAPTURE button -> GPIO13 to GND   (uses internal pull-up, active LOW)
-//   RESET  button  -> EN pin to GND   (hardware reset)
-//   Power the module from a solid 5V/1A+ supply (brown-outs kill camera init).
-//
-// ---- ARDUINO IDE SETUP -----------------------------------------------------
-//   Board: "AI Thinker ESP32-CAM"   |   PSRAM: Enabled   |   Partition: Huge APP
-//   Libraries: "LiquidCrystal I2C" (Frank de Brabander), ArduinoJson (Blanchon)
-//   Credentials: put WiFi + Supabase values in secrets.h (see secrets.h.example).
-//                Keep secrets.h in this same sketch folder so the IDE compiles it.
+// Arduino IDE: Board "AI Thinker ESP32-CAM", PSRAM Enabled, Partition Huge APP.
+// Credentials in secrets.h (copy secrets.h.example).
 // ============================================================================
 
 #include "esp_camera.h"
@@ -28,22 +20,11 @@
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-
-// ----------------------------- CONFIG ---------------------------------------
-// WiFi + Supabase credentials live in secrets.h (copy secrets.h.example first).
 #include "secrets.h"
 
-#define BUCKET         "captures"
-
-#define BUTTON_PIN     13
-#define LCD_SDA        15
-#define LCD_SCL        14
-#define LCD_ADDR       0x27
-#define LCD_COLS       16
-#define LCD_ROWS       2
-// ----------------------------------------------------------------------------
+#define BUCKET     "captures"
+#define REST_BASE  "https://" SUPABASE_HOST "/rest/v1"
+#define POLL_MS    1500
 
 // AI-Thinker ESP32-CAM pin map
 #define PWDN_GPIO_NUM 32
@@ -63,14 +44,7 @@
 #define HREF_GPIO_NUM 23
 #define PCLK_GPIO_NUM 22
 
-LiquidCrystal_I2C lcd(LCD_ADDR, LCD_COLS, LCD_ROWS);
-
-void lcdLine(uint8_t row, const String& msg) {
-  lcd.setCursor(0, row);
-  String s = msg; while (s.length() < LCD_COLS) s += ' ';
-  lcd.print(s.substring(0, LCD_COLS));
-}
-void showIdle() { lcdLine(0, "Canopy Ready"); lcdLine(1, "Press Capture"); }
+unsigned long lastPoll = 0;
 
 bool startCamera() {
   camera_config_t c;
@@ -82,14 +56,13 @@ bool startCamera() {
   c.pin_sccb_sda = SIOD_GPIO_NUM; c.pin_sccb_scl = SIOC_GPIO_NUM;
   c.pin_pwdn = PWDN_GPIO_NUM; c.pin_reset = RESET_GPIO_NUM;
   c.xclk_freq_hz = 20000000; c.pixel_format = PIXFORMAT_JPEG;
-  c.frame_size = FRAMESIZE_SVGA;          // 800x600 — plenty for a canopy ratio
-  c.jpeg_quality = 12; c.fb_count = psramFound() ? 2 : 1;
+  c.frame_size = FRAMESIZE_SVGA; c.jpeg_quality = 12;
+  c.fb_count = psramFound() ? 2 : 1;
   c.grab_mode = CAMERA_GRAB_LATEST; c.fb_location = CAMERA_FB_IN_PSRAM;
   return esp_camera_init(&c) == ESP_OK;
 }
 
 void connectWifi() {
-  lcdLine(0, "WiFi connecting"); lcdLine(1, "");
   Serial.printf("[wifi] connecting to \"%s\" ...\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -99,120 +72,125 @@ void connectWifi() {
   if (WiFi.status() == WL_CONNECTED)
     Serial.printf("[wifi] connected, IP %s, RSSI %d\n", WiFi.localIP().toString().c_str(), WiFi.RSSI());
   else
-    Serial.println("[wifi] FAILED to connect");
+    Serial.println("[wifi] FAILED");
 }
 
-// Upload the JPEG to Storage. Returns the object path (relative to bucket) or "".
-String uploadImage(camera_fb_t* fb) {
-  String path = String(DEVICE_ID) + "/" + String(millis()) + ".jpg";
-  String url = "https://" SUPABASE_HOST "/storage/v1/object/" BUCKET "/" + path;
-
-  WiFiClientSecure client; client.setInsecure();
-  HTTPClient https;
-  if (!https.begin(client, url)) return "";
-  https.addHeader("apikey", SUPABASE_ANON);
-  https.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON);
-  https.addHeader("Content-Type", "image/jpeg");
-  https.addHeader("x-upsert", "true");
-
-  int code = https.POST(fb->buf, fb->len);
-  Serial.printf("[upload] HTTP %d\n", code);
-  https.end();
-  return (code == 200 || code == 201) ? path : "";
+// --- Supabase helpers -------------------------------------------------------
+void addAuth(HTTPClient& h) {
+  h.addHeader("apikey", SUPABASE_ANON);
+  h.addHeader("Authorization", "Bearer " SUPABASE_ANON);
 }
 
-// Call the Edge Function. Returns canopy_pct (>=0) or -1 on failure.
-float processCapture(const String& imagePath) {
-  String url = "https://" SUPABASE_HOST "/functions/v1/process-capture";
+// Oldest 'requested' row for this device, or "" if none.
+String fetchRequestedId() {
   WiFiClientSecure client; client.setInsecure();
-  HTTPClient https;
-  if (!https.begin(client, url)) return -1;
-  https.addHeader("apikey", SUPABASE_ANON);
-  https.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON);
-  https.addHeader("Content-Type", "application/json");
-
-  StaticJsonDocument<192> req;
-  req["device_id"] = DEVICE_ID;
-  req["image_path"] = imagePath;
-  String payload; serializeJson(req, payload);
-
-  int code = https.POST(payload);
-  Serial.printf("[process] HTTP %d\n", code);
-  float pct = -1;
+  HTTPClient h;
+  h.begin(client, REST_BASE "/captures?device_id=eq." DEVICE_ID
+                  "&status=eq.requested&select=id&order=created_at.asc&limit=1");
+  addAuth(h);
+  int code = h.GET();
+  String id = "";
   if (code == 200) {
-    // Only extract capture.canopy_pct — a filter keeps memory tiny no matter
-    // how many fields the response carries.
-    StaticJsonDocument<64> filter;
-    filter["ok"] = true;
-    filter["capture"]["canopy_pct"] = true;
-    StaticJsonDocument<128> resp;
-    DeserializationError err =
-      deserializeJson(resp, https.getString(), DeserializationOption::Filter(filter));
-    if (err) Serial.printf("[process] json err: %s\n", err.c_str());
-    else if (resp["ok"] == true && !resp["capture"]["canopy_pct"].isNull())
-      pct = resp["capture"]["canopy_pct"].as<float>();
+    StaticJsonDocument<192> d;
+    if (!deserializeJson(d, h.getString()) && d.is<JsonArray>() && d.size() > 0)
+      id = d[0]["id"].as<String>();
   }
-  https.end();
-  return pct;
+  h.end();
+  return id;
 }
 
-void runCapture() {
-  Serial.println("[capture] button pressed");
-  lcdLine(0, "Capturing..."); lcdLine(1, "");
+bool patchCapture(const String& id, const String& body) {
+  WiFiClientSecure client; client.setInsecure();
+  HTTPClient h;
+  h.begin(client, String(REST_BASE) + "/captures?id=eq." + id);
+  addAuth(h);
+  h.addHeader("Content-Type", "application/json");
+  int code = h.sendRequest("PATCH", (uint8_t*)body.c_str(), body.length());
+  h.end();
+  return code == 200 || code == 204;
+}
+
+bool uploadImage(camera_fb_t* fb, const String& path) {
+  WiFiClientSecure client; client.setInsecure();
+  HTTPClient h;
+  h.begin(client, String("https://" SUPABASE_HOST "/storage/v1/object/" BUCKET "/") + path);
+  addAuth(h);
+  h.addHeader("Content-Type", "image/jpeg");
+  h.addHeader("x-upsert", "true");
+  int code = h.POST(fb->buf, fb->len);
+  Serial.printf("[upload] HTTP %d\n", code);
+  h.end();
+  return code == 200 || code == 201;
+}
+
+bool callProcess(const String& id) {
+  WiFiClientSecure client; client.setInsecure();
+  HTTPClient h;
+  h.begin(client, "https://" SUPABASE_HOST "/functions/v1/process-capture");
+  addAuth(h);
+  h.addHeader("Content-Type", "application/json");
+  int code = h.POST(String("{\"capture_id\":\"") + id + "\"}");
+  Serial.printf("[process] HTTP %d\n", code);
+  h.end();
+  return code == 200;
+}
+
+// Full job for one requested capture.
+void handleRequest(const String& id) {
+  Serial.printf("[req] handling %s\n", id.c_str());
+  patchCapture(id, "{\"status\":\"uploading\"}");   // claim it
+
   camera_fb_t* fb = esp_camera_fb_get();
-  if (!fb) { Serial.println("[capture] esp_camera_fb_get failed"); lcdLine(0, "Camera error"); delay(2000); showIdle(); return; }
-  Serial.printf("[capture] frame %u bytes\n", (unsigned)fb->len);
+  if (!fb) {
+    Serial.println("[cam] capture FAILED");
+    patchCapture(id, "{\"status\":\"error\",\"error\":\"camera capture failed\"}");
+    return;
+  }
+  Serial.printf("[cam] frame %u bytes\n", (unsigned)fb->len);
 
-  lcdLine(0, "Uploading...");
-  String path = uploadImage(fb);
+  String path = String(DEVICE_ID) + "/" + id + ".jpg";
+  bool up = uploadImage(fb, path);
   esp_camera_fb_return(fb);
-  if (path == "") { Serial.println("[upload] FAILED"); lcdLine(0, "Upload failed"); delay(2000); showIdle(); return; }
-  Serial.printf("[upload] ok -> %s\n", path.c_str());
+  if (!up) {
+    patchCapture(id, "{\"status\":\"error\",\"error\":\"upload failed\"}");
+    return;
+  }
+  patchCapture(id, String("{\"image_path\":\"") + path + "\",\"status\":\"uploaded\"}");
+  callProcess(id);   // Edge Function computes canopy % and marks it done
+}
 
-  lcdLine(0, "Processing...");
-  float pct = processCapture(path);
-  if (pct < 0) { Serial.println("[process] FAILED"); lcdLine(0, "Process failed"); delay(2000); showIdle(); return; }
-  Serial.printf("[process] canopy = %.1f %%\n", pct);
-
-  lcdLine(0, "Canopy Cover:");
-  lcdLine(1, String(pct, 1) + " %");
-  delay(7000);
-  showIdle();
+// Test helper: pretend the ESP32 pressed its button.
+void insertTestRequest() {
+  WiFiClientSecure client; client.setInsecure();
+  HTTPClient h;
+  h.begin(client, REST_BASE "/captures");
+  addAuth(h);
+  h.addHeader("Content-Type", "application/json");
+  int code = h.POST(String("{\"device_id\":\"" DEVICE_ID "\",\"status\":\"requested\"}"));
+  Serial.printf("[test] inserted request HTTP %d\n", code);
+  h.end();
 }
 
 void setup() {
   Serial.begin(115200);
   delay(300);
-  Serial.println("\n\n[canopy] boot");
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
-  Wire.begin(LCD_SDA, LCD_SCL);
-  lcd.init(); lcd.backlight();
-  lcdLine(0, "Canopy Densito"); lcdLine(1, "starting...");
-
+  Serial.println("\n\n[canopy-cam] boot");
   if (!startCamera()) {
     Serial.println("[cam] init FAILED - check 5V power / ribbon cable");
-    lcdLine(0, "Cam init FAIL"); lcdLine(1, "check power");
     while (true) delay(1000);
   }
   Serial.println("[cam] init OK");
   connectWifi();
-  if (WiFi.status() != WL_CONNECTED) { lcdLine(0, "WiFi FAIL"); delay(2000); }
-  Serial.println("[canopy] ready - press the capture button (or send 'c' on serial)");
-  showIdle();
+  Serial.println("[canopy-cam] watching for capture requests (send 'r' to self-test)");
 }
 
 void loop() {
-  // Serial trigger: send 'c' over USB to capture without the physical button
-  // (handy for bench testing before the button is wired).
-  if (Serial.available()) {
-    char c = Serial.read();
-    if (c == 'c' || c == 'C') runCapture();
-  }
-  if (digitalRead(BUTTON_PIN) == LOW) {          // active-low
-    delay(40);
-    if (digitalRead(BUTTON_PIN) == LOW) {
-      runCapture();
-      while (digitalRead(BUTTON_PIN) == LOW) delay(10);   // wait for release
-    }
+  if (Serial.available()) { char c = Serial.read(); if (c == 'r' || c == 'R') insertTestRequest(); }
+
+  if (millis() - lastPoll >= POLL_MS) {
+    lastPoll = millis();
+    if (WiFi.status() != WL_CONNECTED) { connectWifi(); return; }
+    String id = fetchRequestedId();
+    if (id != "") handleRequest(id);
   }
 }
