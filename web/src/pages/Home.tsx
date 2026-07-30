@@ -27,7 +27,7 @@ export default function Home() {
             <TreeIcon className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-white sm:text-2xl">Canopy Densitometer</h1>
+            <h1 className="text-xl font-semibold text-white sm:text-2xl">Canopy</h1>
             <p className="text-sm text-white/40">Live tree-canopy cover</p>
           </div>
         </div>

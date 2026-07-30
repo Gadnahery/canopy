@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["apple-touch-icon.png", "favicon-64.png"],
       manifest: {
-        name: "Canopy Densitometer",
+        name: "Canopy",
         short_name: "Canopy",
-        description: "Tree canopy cover measurements from an ESP32-CAM",
+        description: "Tree canopy cover meter",
         theme_color: "#070b09",
         background_color: "#070b09",
         display: "standalone",

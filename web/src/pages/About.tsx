@@ -19,7 +19,7 @@ export default function About() {
         </div>
         <div>
           <h1 className="text-xl font-semibold text-white sm:text-2xl">About</h1>
-          <p className="text-sm text-white/40">Canopy Densitometer</p>
+          <p className="text-sm text-white/40">Canopy · tree canopy cover meter</p>
         </div>
       </header>
 
