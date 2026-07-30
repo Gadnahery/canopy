@@ -22,9 +22,11 @@
 #include <ArduinoJson.h>
 #include "secrets.h"
 
-#define BUCKET     "captures"
-#define REST_BASE  "https://" SUPABASE_HOST "/rest/v1"
-#define POLL_MS    1500
+#define BUCKET       "captures"
+#define REST_BASE    "https://" SUPABASE_HOST "/rest/v1"
+#define POLL_MS      1500
+#define HEARTBEAT_MS 20000
+#define HEARTBEAT_ID "esp32-cam"
 
 // AI-Thinker ESP32-CAM pin map
 #define PWDN_GPIO_NUM 32
@@ -44,7 +46,7 @@
 #define HREF_GPIO_NUM 23
 #define PCLK_GPIO_NUM 22
 
-unsigned long lastPoll = 0;
+unsigned long lastPoll = 0, lastBeat = 0;
 
 bool startCamera() {
   camera_config_t c;
@@ -159,15 +161,14 @@ void handleRequest(const String& id) {
   callProcess(id);   // Edge Function computes canopy % and marks it done
 }
 
-// Test helper: pretend the ESP32 pressed its button.
-void insertTestRequest() {
+// Report "I'm alive" so the web app can show this board online.
+void heartbeat() {
   WiFiClientSecure client; client.setInsecure();
   HTTPClient h;
-  h.begin(client, REST_BASE "/captures");
+  h.begin(client, REST_BASE "/rpc/device_heartbeat");
   addAuth(h);
   h.addHeader("Content-Type", "application/json");
-  int code = h.POST(String("{\"device_id\":\"" DEVICE_ID "\",\"status\":\"requested\"}"));
-  Serial.printf("[test] inserted request HTTP %d\n", code);
+  h.POST("{\"p_id\":\"" HEARTBEAT_ID "\",\"p_name\":\"ESP32-CAM\",\"p_kind\":\"camera\"}");
   h.end();
 }
 
@@ -181,11 +182,12 @@ void setup() {
   }
   Serial.println("[cam] init OK");
   connectWifi();
-  Serial.println("[canopy-cam] watching for capture requests (send 'r' to self-test)");
+  heartbeat();
+  Serial.println("[canopy-cam] watching for capture requests");
 }
 
 void loop() {
-  if (Serial.available()) { char c = Serial.read(); if (c == 'r' || c == 'R') insertTestRequest(); }
+  if (millis() - lastBeat >= HEARTBEAT_MS) { lastBeat = millis(); heartbeat(); }
 
   if (millis() - lastPoll >= POLL_MS) {
     lastPoll = millis();

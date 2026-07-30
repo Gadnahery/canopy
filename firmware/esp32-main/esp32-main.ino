@@ -34,11 +34,13 @@
 #define LCD_COLS           16
 #define LCD_ROWS           2
 #define POLL_MS            800
-#define CAPTURE_TIMEOUT_MS 30000
+#define CAPTURE_TIMEOUT_MS 45000
+#define HEARTBEAT_MS       20000
+#define HEARTBEAT_ID       "esp32-controller"
 
 LiquidCrystal_I2C lcd(LCD_ADDR, LCD_COLS, LCD_ROWS);
 String activeId = "";
-unsigned long captureStart = 0, lastPoll = 0;
+unsigned long captureStart = 0, lastPoll = 0, lastBeat = 0;
 String lastStatus = "";
 
 void lcdLine(uint8_t row, const String& msg) {
@@ -64,6 +66,18 @@ void connectWifi() {
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   uint8_t t = 0;
   while (WiFi.status() != WL_CONNECTED && t++ < 40) delay(250);
+}
+
+// Report "I'm alive" so the web app can show this board online.
+void heartbeat() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  WiFiClientSecure client; client.setInsecure();
+  HTTPClient h;
+  h.begin(client, REST_BASE "/rpc/device_heartbeat");
+  addAuth(h);
+  h.addHeader("Content-Type", "application/json");
+  h.POST("{\"p_id\":\"" HEARTBEAT_ID "\",\"p_name\":\"ESP32 Controller\",\"p_kind\":\"controller\"}");
+  h.end();
 }
 
 // Insert a 'requested' row; returns its id (or "").
@@ -127,10 +141,13 @@ void setup() {
   lcdLine(0, "Canopy Densito"); lcdLine(1, "starting...");
   connectWifi();
   if (WiFi.status() != WL_CONNECTED) { lcdLine(0, "WiFi FAIL"); delay(2000); }
+  heartbeat();
   showIdle();
 }
 
 void loop() {
+  if (millis() - lastBeat >= HEARTBEAT_MS) { lastBeat = millis(); heartbeat(); }
+
   if (activeId == "") {
     if (buttonPressed()) {
       delay(40);

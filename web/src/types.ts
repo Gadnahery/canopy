@@ -1,9 +1,5 @@
 export type CaptureStatus =
-  | "requested"
-  | "uploaded"
-  | "processing"
-  | "done"
-  | "error";
+  | "requested" | "uploading" | "uploaded" | "processing" | "done" | "error";
 
 export interface Capture {
   id: string;
@@ -22,4 +18,13 @@ export interface Capture {
   error: string | null;
   created_at: string;
   processed_at: string | null;
+}
+
+export interface Device {
+  id: string;
+  name: string | null;
+  kind: string | null;        // 'controller' | 'camera'
+  location: string | null;
+  last_seen: string | null;
+  created_at: string;
 }
