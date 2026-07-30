@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Capture } from "../types";
-import { imageUrl, supabase } from "../lib/supabase";
+import { imageUrl, supabase, BUCKET } from "../lib/supabase";
 import StatusBadge from "./StatusBadge";
 
 function Row({ k, v }: { k: string; v: string }) {
@@ -21,7 +21,20 @@ export default function CaptureDetail({
 }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState(false);
   const url = imageUrl(capture.image_path);
+
+  async function remove() {
+    setBusy(true);
+    setMsg(null);
+    if (capture.image_path) {
+      await supabase.storage.from(BUCKET).remove([capture.image_path]);
+    }
+    const { error } = await supabase.from("captures").delete().eq("id", capture.id);
+    setBusy(false);
+    if (error) setMsg(error.message);
+    else onClose(); // realtime DELETE event removes it from the list
+  }
 
   async function reprocess() {
     setBusy(true);
@@ -87,8 +100,35 @@ export default function CaptureDetail({
               disabled={busy || !capture.image_path}
               className="mt-4 w-full rounded-xl bg-canopy-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-canopy-500 disabled:opacity-40"
             >
-              {busy ? "Reprocessing…" : "Reprocess image"}
+              {busy ? "Working…" : "Reprocess image"}
             </button>
+
+            {!confirmDel ? (
+              <button
+                onClick={() => setConfirmDel(true)}
+                disabled={busy}
+                className="mt-2 w-full rounded-xl border border-rose-500/30 px-4 py-2.5 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-40"
+              >
+                Delete capture
+              </button>
+            ) : (
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={remove}
+                  disabled={busy}
+                  className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500 disabled:opacity-40"
+                >
+                  {busy ? "Deleting…" : "Confirm delete"}
+                </button>
+                <button
+                  onClick={() => setConfirmDel(false)}
+                  disabled={busy}
+                  className="rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 transition hover:bg-white/5"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
             {msg && <p className="mt-2 text-center text-xs text-slate-400">{msg}</p>}
           </div>
         </div>
