@@ -13,7 +13,7 @@ export default function TrendChart({ captures, height = 224 }: { captures: Captu
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={data} margin={{ top: 4, right: 8, left: -18, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
         <defs>
           <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#22c55e" stopOpacity={0.45} />
@@ -22,7 +22,7 @@ export default function TrendChart({ captures, height = 224 }: { captures: Captu
         </defs>
         <CartesianGrid stroke="#ffffff0d" vertical={false} />
         <XAxis dataKey="t" tick={{ fill: "#ffffff55", fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={26} />
-        <YAxis domain={[0, 100]} unit="%" tick={{ fill: "#ffffff55", fontSize: 11 }} tickLine={false} axisLine={false} width={44} />
+        <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" tick={{ fill: "#ffffff55", fontSize: 11 }} tickLine={false} axisLine={false} width={46} />
         <Tooltip
           contentStyle={{ background: "#0d1310", border: "1px solid #1e2a22", borderRadius: 14, color: "#e6f2ea" }}
           formatter={(v: number) => [`${v.toFixed(1)}%`, "Canopy"]}

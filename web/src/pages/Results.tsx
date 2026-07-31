@@ -51,7 +51,7 @@ export default function Results() {
           <div className="flex h-48 items-center justify-center text-sm text-white/30">No data yet.</div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={buckets} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+            <BarChart data={buckets} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
               <XAxis dataKey="range" tick={{ fill: "#ffffff55", fontSize: 10 }} tickLine={false} axisLine={false} interval={0} />
               <YAxis allowDecimals={false} tick={{ fill: "#ffffff55", fontSize: 11 }} tickLine={false} axisLine={false} width={36} />
               <Tooltip cursor={{ fill: "#ffffff08" }} contentStyle={{ background: "#0d1310", border: "1px solid #1e2a22", borderRadius: 14, color: "#e6f2ea" }} formatter={(v: number) => [`${v}`, "captures"]} />
