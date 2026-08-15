@@ -34,7 +34,7 @@ function DeviceCard({ d, i }: { d: Device; i: number }) {
 
 export default function DeviceStatus({ devices }: { devices: Device[] }) {
   if (devices.length === 0) {
-    return <div className="card p-4 text-sm text-white/40">No devices registered yet.</div>;
+    return <div className="card p-4 text-sm text-text-secondary">No devices registered yet.</div>;
   }
   return (
     <div className="grid gap-3 sm:grid-cols-2">

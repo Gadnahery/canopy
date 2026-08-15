@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { HomeIcon, HistoryIcon, ChartIcon, InfoIcon, TreeIcon, MenuIcon } from "./icons";
 
 export const NAV = [
-  { to: "/",        label: "Home",    Icon: HomeIcon },
+  { to: "/",        label: "Dashboard",    Icon: HomeIcon },
   { to: "/history", label: "History", Icon: HistoryIcon },
   { to: "/results", label: "Results", Icon: ChartIcon },
   { to: "/about",   label: "About",   Icon: InfoIcon },
@@ -17,7 +17,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         collapsed ? "w-[76px]" : "w-60"
       }`}
     >
-      <div className="flex items-center gap-3 px-5 py-5">
+      <div className="flex items-center gap-3 border-b border-line px-5 py-5">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10">
           <TreeIcon className="h-5 w-5" />
         </div>
@@ -54,7 +54,10 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         ))}
       </nav>
 
-      <button onClick={onToggle} className="m-3 flex items-center justify-center gap-2 rounded-2xl border border-line py-2 text-xs text-text-secondary hover:bg-base/50">
+      <div className="m-3 rounded-2xl border border-line bg-bg-light p-3 text-center text-xs text-text-secondary">
+        {!collapsed && <><TreeIcon className="mx-auto mb-1 h-7 w-7 text-primary" /><strong className="block text-primary">CANOPIX</strong><span>Portable · Accurate · Reliable</span></>}
+      </div>
+      <button onClick={onToggle} className="mx-3 mb-3 flex items-center justify-center gap-2 rounded-2xl border border-line py-2 text-xs text-text-secondary hover:bg-base/50">
         <MenuIcon className="h-4 w-4" />
         {!collapsed && <span>Collapse</span>}
       </button>
@@ -97,18 +100,16 @@ export default function Layout() {
     <div className="flex min-h-dvh">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       <main className="min-w-0 flex-1 pb-28 md:pb-0">
-        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:py-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+        <div className="border-b border-line bg-surface px-4 py-3 sm:px-6">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between">
+            <span className="text-sm font-medium text-text-secondary">CANOPIX Monitoring Console</span>
+            <span className="chip bg-bg-light text-primary"><span className="h-2 w-2 rounded-full bg-success" />System online</span>
+          </div>
+        </div>
+        <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:py-8">
+          <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12 }}>
+            <Outlet />
+          </motion.div>
         </div>
       </main>
       <BottomNav />

@@ -7,8 +7,8 @@ import TrendChart from "../components/TrendChart";
 function Metric({ label, value, i }: { label: string; value: string; i: number }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="card p-4 text-center">
-      <div className="text-2xl font-bold tabular-nums text-white sm:text-3xl">{value}</div>
-      <div className="mt-1 text-[11px] uppercase tracking-wider text-white/40">{label}</div>
+      <div className="text-2xl font-bold tabular-nums text-primary sm:text-3xl">{value}</div>
+      <div className="mt-1 text-[11px] uppercase tracking-wider text-text-secondary">{label}</div>
     </motion.div>
   );
 }
@@ -46,7 +46,6 @@ export default function Results() {
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-4 text-sm font-semibold text-white/80">Distribution</h2>
         <h2 className="mb-4 text-sm font-semibold text-text">Distribution</h2>
         {done.length === 0 ? (
           <div className="flex h-48 items-center justify-center text-sm text-text-secondary">No data yet.</div>
