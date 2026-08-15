@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { supabase } from "../lib/supabase";
 import type { Device } from "../types";
 
@@ -13,6 +13,7 @@ export function isOnline(d: Device): boolean {
 export function useDevices() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [, setTick] = useState(0);
+  const channelId = useId();
 
   useEffect(() => {
     let active = true;
@@ -24,7 +25,7 @@ export function useDevices() {
     load();
 
     const channel = supabase
-      .channel("devices-live")
+      .channel(`devices-live-${channelId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "devices" }, load)
       .subscribe();
 
@@ -36,7 +37,7 @@ export function useDevices() {
       clearInterval(poll);
       clearInterval(tick);
     };
-  }, []);
+  }, [channelId]);
 
   return devices;
 }

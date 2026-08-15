@@ -8,22 +8,21 @@ import Results from "./pages/Results";
 import About from "./pages/About";
 import "./index.css";
 
-class AppErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean; message: string }> {
-  state = { failed: false, message: "" };
+class AppErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
 
   static getDerivedStateFromError() {
     return { failed: true };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    this.setState({ message: error.message });
     console.error("CANOPIX application error", error, info);
   }
 
   render() {
     if (this.state.failed) {
       return <main className="grid min-h-dvh place-items-center bg-base p-6 text-center text-text">
-        <div className="card max-w-md p-8"><h1 className="text-xl font-bold text-primary">CANOPIX could not load</h1><p className="mt-2 text-sm text-text-secondary">Please refresh the dashboard. If this continues, clear the site data and try again.</p><p className="mt-3 break-words rounded bg-bg-light p-2 font-mono text-xs text-text-secondary">{this.state.message}</p><button className="btn-primary mt-5" onClick={() => window.location.reload()}>Refresh dashboard</button></div>
+        <div className="card max-w-md p-8"><h1 className="text-xl font-bold text-primary">CANOPIX could not load</h1><p className="mt-2 text-sm text-text-secondary">Please refresh the dashboard. If this continues, clear the site data and try again.</p><button className="btn-primary mt-5" onClick={() => window.location.reload()}>Refresh dashboard</button></div>
       </main>;
     }
     return this.props.children;
