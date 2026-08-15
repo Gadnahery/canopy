@@ -18,13 +18,13 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
       }`}
     >
       <div className="flex items-center gap-3 px-5 py-5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-forest-500/15 text-forest-400 ring-1 ring-forest-500/25">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10">
           <TreeIcon className="h-5 w-5" />
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-white">Canopy</div>
-            <div className="truncate text-[11px] text-white/40">Densitometer</div>
+            <div className="truncate text-sm font-semibold text-text">CANOPIX</div>
+            <div className="truncate text-[11px] text-text-secondary">Forest Canopy Analysis</div>
           </div>
         )}
       </div>
@@ -37,14 +37,14 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
             end={to === "/"}
             className={({ isActive }) =>
               `group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
-                isActive ? "bg-forest-500/15 text-forest-300" : "text-white/60 hover:bg-white/5 hover:text-white"
+                isActive ? "bg-primary/10 text-primary" : "text-text-secondary hover:bg-base/50 hover:text-text"
               }`
             }
           >
             {({ isActive }) => (
               <>
                 {isActive && (
-                  <motion.span layoutId="side-active" className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-forest-400" />
+                  <motion.span layoutId="side-active" className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-primary" />
                 )}
                 <Icon className="h-5 w-5 shrink-0" />
                 {!collapsed && <span>{label}</span>}
@@ -54,7 +54,7 @@ function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => 
         ))}
       </nav>
 
-      <button onClick={onToggle} className="m-3 flex items-center justify-center gap-2 rounded-2xl border border-line py-2 text-xs text-white/50 hover:bg-white/5">
+      <button onClick={onToggle} className="m-3 flex items-center justify-center gap-2 rounded-2xl border border-line py-2 text-xs text-text-secondary hover:bg-base/50">
         <MenuIcon className="h-4 w-4" />
         {!collapsed && <span>Collapse</span>}
       </button>
@@ -70,14 +70,14 @@ function BottomNav() {
           <NavLink key={to} to={to} end={to === "/"} aria-label={label}
             className={({ isActive }) =>
               `relative flex h-12 w-14 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition ${
-                isActive ? "text-forest-300" : "text-white/50"
+                isActive ? "text-primary" : "text-text-secondary"
               }`
             }
           >
             {({ isActive }) => (
               <>
                 {isActive && (
-                  <motion.span layoutId="tab-active" className="absolute inset-0 rounded-full bg-forest-500/15 ring-1 ring-forest-500/25" transition={{ type: "spring", stiffness: 400, damping: 32 }} />
+                  <motion.span layoutId="tab-active" className="absolute inset-0 rounded-full bg-primary/10 ring-1 ring-primary/10" transition={{ type: "spring", stiffness: 400, damping: 32 }} />
                 )}
                 <Icon className="relative h-5 w-5" />
                 <span className="relative">{label}</span>

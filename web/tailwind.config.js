@@ -4,16 +4,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        // near-black surfaces with a faint green tint
-        base:    "#070b09",
-        surface: "#0d1310",
-        raised:  "#121a15",
-        line:    "#1e2a22",
-        // forest green ramp (accent)
+        // Light theme palette for CANOPIX (requested exact values)
+        base:    "#F5F7F4", // main background
+        "bg-light": "#F1F8F2",
+        surface: "#FFFFFF", // card/surface
+        raised:  "#FFFFFF",
+        line:    "#DDE7DE", // border
+        text: {
+          DEFAULT: "#263238", // primary text
+          secondary: "#607D8B",
+        },
+        primary: {
+          DEFAULT: "#1B5E20", // Primary Forest Green
+          600: "#2E7D32", // Secondary Green (also success)
+          300: "#8BC34A", // Accent/Lime
+        },
+        success: "#2E7D32",
+        warning: "#F9A825",
+        error: "#C62828",
         forest: {
-          50: "#f0fdf4", 100: "#dcfce7", 200: "#bbf7d0", 300: "#86efac",
-          400: "#4ade80", 500: "#22c55e", 600: "#16a34a", 700: "#15803d",
-          800: "#166534", 900: "#14532d", 950: "#052e16",
+          50: "#F1F8F2",
+          100: "#E6F3E8",
+          200: "#CFE7CF",
+          300: "#8BC34A",
+          400: "#5DA34A",
+          500: "#1B5E20",
+          600: "#2E7D32",
+          700: "#225B25",
+          800: "#1A4A1B",
+          900: "#143813",
         },
       },
       fontFamily: {

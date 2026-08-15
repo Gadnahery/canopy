@@ -10,21 +10,21 @@ function DeviceCard({ d, i }: { d: Device; i: number }) {
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
       className="card flex items-center gap-4 p-4"
     >
-      <div className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${online ? "bg-forest-500/15 text-forest-300" : "bg-white/5 text-white/40"}`}>
-        <span className={`h-2.5 w-2.5 rounded-full ${online ? "bg-forest-400 animate-pulse-ring" : "bg-white/30"}`} />
+      <div className={`relative flex h-11 w-11 items-center justify-center rounded-2xl ${online ? "bg-primary/10 text-primary" : "bg-surface text-text-secondary"}`}>
+        <span className={`h-2.5 w-2.5 rounded-full ${online ? "bg-primary animate-pulse-ring" : "bg-text-secondary"}`} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-white">{d.name ?? d.id}</div>
-        <div className="text-xs text-white/40">
+        <div className="truncate text-sm font-semibold text-text">{d.name ?? d.id}</div>
+        <div className="text-xs text-text-secondary">
           {d.kind === "camera" ? "ESP32-CAM · camera" : "ESP32 · button + LCD"}
         </div>
       </div>
       <div className="text-right">
-        <div className={`chip ${online ? "bg-forest-500/15 text-forest-300" : "bg-white/5 text-white/40"}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-forest-400" : "bg-white/40"}`} />
+        <div className={`chip ${online ? "bg-primary/10 text-primary" : "bg-surface text-text-secondary"}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-primary" : "bg-text-secondary"}`} />
           {online ? "Online" : "Offline"}
         </div>
-        <div className="mt-1 text-[11px] text-white/30">
+        <div className="mt-1 text-[11px] text-text-secondary">
           {d.last_seen ? `seen ${formatDistanceToNow(new Date(d.last_seen), { addSuffix: true })}` : "no heartbeat yet"}
         </div>
       </div>

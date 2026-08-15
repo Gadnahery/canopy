@@ -29,3 +29,6 @@ firmware/**/secrets.h
 .DS_Store
 Thumbs.db
 *.log
+
+# Ignore project book content (large docs/assets)
+projectbook/

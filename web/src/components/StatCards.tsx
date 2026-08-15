@@ -7,9 +7,9 @@ function Stat({ label, value, sub, i }: { label: string; value: string; sub?: st
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
       className="card p-4 sm:p-5"
     >
-      <div className="text-[11px] uppercase tracking-wider text-white/40">{label}</div>
-      <div className="mt-1.5 text-2xl font-semibold tabular-nums text-white sm:text-3xl">{value}</div>
-      {sub && <div className="mt-1 text-[11px] text-white/30">{sub}</div>}
+      <div className="text-[11px] uppercase tracking-wider text-text-secondary">{label}</div>
+      <div className="mt-1.5 text-2xl font-semibold tabular-nums text-text sm:text-3xl">{value}</div>
+      {sub && <div className="mt-1 text-[11px] text-text-secondary">{sub}</div>}
     </motion.div>
   );
 }

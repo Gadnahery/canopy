@@ -1,12 +1,12 @@
 import type { CaptureStatus } from "../types";
 
 const MAP: Record<CaptureStatus, { label: string; cls: string }> = {
-  requested:  { label: "Requested",  cls: "bg-white/5 text-white/60" },
-  uploading:  { label: "Uploading",  cls: "bg-sky-500/15 text-sky-300" },
-  uploaded:   { label: "Uploaded",   cls: "bg-sky-500/15 text-sky-300" },
-  processing: { label: "Processing", cls: "bg-amber-500/15 text-amber-300" },
-  done:       { label: "Done",       cls: "bg-forest-500/15 text-forest-300" },
-  error:      { label: "Error",      cls: "bg-rose-500/15 text-rose-300" },
+  requested:  { label: "Requested",  cls: "bg-surface text-text-secondary" },
+  uploading:  { label: "Uploading",  cls: "bg-primary/10 text-primary" },
+  uploaded:   { label: "Uploaded",   cls: "bg-primary/10 text-primary" },
+  processing: { label: "Processing", cls: "bg-warning/10 text-warning" },
+  done:       { label: "Done",       cls: "bg-primary/10 text-primary" },
+  error:      { label: "Error",      cls: "bg-error/10 text-error" },
 };
 
 export default function StatusBadge({ status }: { status: CaptureStatus }) {

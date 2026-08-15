@@ -29,8 +29,8 @@ export default function Results() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-xl font-semibold text-white sm:text-2xl">Results</h1>
-        <p className="text-sm text-white/40">Analytics across {done.length} measurements</p>
+          <h1 className="text-xl font-semibold text-text sm:text-2xl">Results</h1>
+          <p className="text-sm text-text-secondary">Analytics across {done.length} measurements</p>
       </header>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -41,22 +41,23 @@ export default function Results() {
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-4 text-sm font-semibold text-white/80">Canopy cover over time</h2>
+          <h2 className="mb-4 text-sm font-semibold text-text">Canopy cover over time</h2>
         <TrendChart captures={captures} height={260} />
       </div>
 
       <div className="card p-5">
         <h2 className="mb-4 text-sm font-semibold text-white/80">Distribution</h2>
+        <h2 className="mb-4 text-sm font-semibold text-text">Distribution</h2>
         {done.length === 0 ? (
-          <div className="flex h-48 items-center justify-center text-sm text-white/30">No data yet.</div>
+          <div className="flex h-48 items-center justify-center text-sm text-text-secondary">No data yet.</div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={buckets} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
-              <XAxis dataKey="range" tick={{ fill: "#ffffff55", fontSize: 10 }} tickLine={false} axisLine={false} interval={0} />
-              <YAxis allowDecimals={false} tick={{ fill: "#ffffff55", fontSize: 11 }} tickLine={false} axisLine={false} width={36} />
-              <Tooltip cursor={{ fill: "#ffffff08" }} contentStyle={{ background: "#0d1310", border: "1px solid #1e2a22", borderRadius: 14, color: "#e6f2ea" }} formatter={(v: number) => [`${v}`, "captures"]} />
+              <XAxis dataKey="range" tick={{ fill: "#263238", fontSize: 10 }} tickLine={false} axisLine={false} interval={0} />
+              <YAxis allowDecimals={false} tick={{ fill: "#263238", fontSize: 11 }} tickLine={false} axisLine={false} width={36} />
+              <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} contentStyle={{ background: "#ffffff", border: "1px solid #DDE7DE", borderRadius: 8, color: "#263238" }} formatter={(v: number) => [`${v}`, "captures"]} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
-                {buckets.map((b, i) => <Cell key={i} fill={`rgba(34,197,94,${0.35 + (b.mid / 100) * 0.55})`} />)}
+                {buckets.map((b, i) => <Cell key={i} fill={`rgba(27,94,32,${0.25 + (b.mid / 100) * 0.6})`} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

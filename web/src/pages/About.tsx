@@ -14,22 +14,22 @@ export default function About() {
   return (
     <div className="space-y-6">
       <header className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-forest-500/15 text-forest-400 ring-1 ring-forest-500/25">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10">
           <TreeIcon className="h-7 w-7" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold text-white sm:text-2xl">About</h1>
-          <p className="text-sm text-white/40">Canopy · tree canopy cover meter</p>
+          <h1 className="text-xl font-semibold text-text sm:text-2xl">About</h1>
+          <p className="text-sm text-text-secondary">Canopy · tree canopy cover meter</p>
         </div>
       </header>
 
       <div className="card p-5">
-        <p className="text-sm leading-relaxed text-white/70">
-          A two-board IoT device that measures <span className="text-forest-300">tree canopy cover</span> — the
+        <p className="text-sm leading-relaxed text-text-secondary">
+          A two-board IoT device that measures <span className="text-primary">tree canopy cover</span> — the
           fraction of sky blocked by leaves. An ESP32 handles the button and LCD; a standalone ESP32-CAM takes the
           photo and uploads it; the cloud does the image analysis and returns a percentage.
         </p>
-        <div className="mt-4 rounded-2xl bg-raised/60 p-4 text-center font-mono text-sm text-forest-200">
+        <div className="mt-4 rounded-2xl bg-surface/60 p-4 text-center font-mono text-sm text-primary">
           Canopy % = leaf pixels ÷ total pixels × 100
         </div>
       </div>
@@ -38,22 +38,22 @@ export default function About() {
         {steps.map((s, i) => (
           <motion.div key={s.n} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="card p-4">
             <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-forest-500/15 text-sm font-semibold text-forest-300">{s.n}</span>
-              <span className="font-semibold text-white">{s.t}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{s.n}</span>
+              <span className="font-semibold text-text">{s.t}</span>
             </div>
-            <p className="mt-2 text-sm text-white/50">{s.d}</p>
+            <p className="mt-2 text-sm text-text-secondary">{s.d}</p>
           </motion.div>
         ))}
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-3 text-sm font-semibold text-white/80">Built with</h2>
+        <h2 className="mb-3 text-sm font-semibold text-text">Built with</h2>
         <div className="flex flex-wrap gap-2">
-          {stack.map((s) => <span key={s} className="chip bg-white/5 text-white/60">{s}</span>)}
+          {stack.map((s) => <span key={s} className="chip bg-surface text-text-secondary">{s}</span>)}
         </div>
       </div>
 
-      <p className="text-center text-xs text-white/30">Install this app: use “Add to Home Screen” for a full-screen PWA.</p>
+      <p className="text-center text-xs text-text-secondary">Install this app: use “Add to Home Screen” for a full-screen PWA.</p>
     </div>
   );
 }
