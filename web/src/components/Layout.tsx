@@ -1,5 +1,4 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
 import { HomeIcon, HistoryIcon, ChartIcon, InfoIcon, TreeIcon } from "./icons";
 import { isOnline, useDevices } from "../hooks/useDevices";
 
@@ -18,7 +17,7 @@ function Sidebar() {
     </div>
     <nav className="mt-4 flex flex-1 flex-col gap-2 px-4">
       {NAV.map(({ to, label, Icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => `relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${isActive ? "bg-bg-light text-primary" : "text-text-secondary hover:bg-bg-light hover:text-text"}`}>
-        {({ isActive }) => <><Icon className="h-5 w-5" />{isActive && <motion.span layoutId="side-active" className="absolute inset-y-3 left-0 w-1 rounded-full bg-primary" />}<span>{label}</span></>}
+        {({ isActive }) => <><Icon className="h-5 w-5" />{isActive && <span className="absolute inset-y-3 left-0 w-1 rounded-full bg-primary" />}<span>{label}</span></>}
       </NavLink>)}
     </nav>
     <div className="m-4 overflow-hidden rounded-lg border border-line bg-bg-light text-center">
@@ -47,5 +46,5 @@ function BottomNav() {
 
 export default function Layout() {
   const location = useLocation();
-  return <div className="flex min-h-dvh"><Sidebar /><main className="min-w-0 flex-1 pb-28 md:pb-0"><Topbar /><div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:py-7"><motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12 }}><Outlet /></motion.div></div></main><BottomNav /></div>;
+  return <div className="flex min-h-dvh"><Sidebar /><main className="min-w-0 flex-1 pb-28 md:pb-0"><Topbar /><div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:py-7"><div key={location.pathname}><Outlet /></div></div></main><BottomNav /></div>;
 }
