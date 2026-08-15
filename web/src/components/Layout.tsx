@@ -1,118 +1,51 @@
-import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { HomeIcon, HistoryIcon, ChartIcon, InfoIcon, TreeIcon, MenuIcon } from "./icons";
+import { HomeIcon, HistoryIcon, ChartIcon, InfoIcon, TreeIcon } from "./icons";
+import { isOnline, useDevices } from "../hooks/useDevices";
 
 export const NAV = [
-  { to: "/",        label: "Dashboard",    Icon: HomeIcon },
+  { to: "/", label: "Dashboard", Icon: HomeIcon },
   { to: "/history", label: "History", Icon: HistoryIcon },
-  { to: "/results", label: "Results", Icon: ChartIcon },
-  { to: "/about",   label: "About",   Icon: InfoIcon },
+  { to: "/results", label: "Reports", Icon: ChartIcon },
+  { to: "/about", label: "About CANOPIX", Icon: InfoIcon },
 ];
 
-function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
-  return (
-    <aside
-      className={`sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line bg-surface/60 backdrop-blur transition-all duration-300 md:flex ${
-        collapsed ? "w-[76px]" : "w-60"
-      }`}
-    >
-      <div className="flex items-center gap-3 border-b border-line px-5 py-5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10">
-          <TreeIcon className="h-5 w-5" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-text">CANOPIX</div>
-            <div className="truncate text-[11px] text-text-secondary">Forest Canopy Analysis</div>
-          </div>
-        )}
-      </div>
+function Sidebar() {
+  return <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface md:flex">
+    <div className="flex items-center gap-3 border-b border-line px-5 py-4">
+      <div className="grid h-11 w-11 place-items-center rounded-full bg-primary text-white shadow-sm"><TreeIcon className="h-6 w-6" /></div>
+      <div><div className="text-[25px] font-bold leading-none tracking-tight text-primary">CANOPIX</div><div className="mt-1 text-[11px] leading-none text-text-secondary">Forest Canopy Analysis</div></div>
+    </div>
+    <nav className="mt-4 flex flex-1 flex-col gap-2 px-4">
+      {NAV.map(({ to, label, Icon }) => <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) => `relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${isActive ? "bg-bg-light text-primary" : "text-text-secondary hover:bg-bg-light hover:text-text"}`}>
+        {({ isActive }) => <><Icon className="h-5 w-5" />{isActive && <motion.span layoutId="side-active" className="absolute inset-y-3 left-0 w-1 rounded-full bg-primary" />}<span>{label}</span></>}
+      </NavLink>)}
+    </nav>
+    <div className="m-4 overflow-hidden rounded-lg border border-line bg-bg-light text-center">
+      <div className="px-4 pb-4 pt-5"><TreeIcon className="mx-auto h-10 w-10 text-primary" /><div className="mt-2 font-bold text-primary">CANOPIX</div><p className="mt-1 text-[11px] text-text-secondary">Portable · Accurate · Reliable</p><p className="mt-3 text-[11px] leading-relaxed text-text-secondary">Measuring today for healthier forests tomorrow.</p></div>
+      <div className="h-10 bg-gradient-to-t from-primary/35 to-transparent" />
+    </div>
+  </aside>;
+}
 
-      <nav className="mt-2 flex flex-1 flex-col gap-1 px-3">
-        {NAV.map(({ to, label, Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
-            className={({ isActive }) =>
-              `group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
-                isActive ? "bg-primary/10 text-primary" : "text-text-secondary hover:bg-base/50 hover:text-text"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <motion.span layoutId="side-active" className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-primary" />
-                )}
-                <Icon className="h-5 w-5 shrink-0" />
-                {!collapsed && <span>{label}</span>}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="m-3 rounded-2xl border border-line bg-bg-light p-3 text-center text-xs text-text-secondary">
-        {!collapsed && <><TreeIcon className="mx-auto mb-1 h-7 w-7 text-primary" /><strong className="block text-primary">CANOPIX</strong><span>Portable · Accurate · Reliable</span></>}
-      </div>
-      <button onClick={onToggle} className="mx-3 mb-3 flex items-center justify-center gap-2 rounded-2xl border border-line py-2 text-xs text-text-secondary hover:bg-base/50">
-        <MenuIcon className="h-4 w-4" />
-        {!collapsed && <span>Collapse</span>}
-      </button>
-    </aside>
-  );
+function Topbar() {
+  const devices = useDevices();
+  const connected = devices.some(isOnline);
+  const now = new Date();
+  return <div className="border-b border-line bg-surface px-4 py-3 sm:px-6">
+    <div className="mx-auto flex max-w-[1440px] items-center justify-end gap-5 sm:gap-8">
+      <div className="hidden items-center gap-2 border-r border-line pr-6 sm:flex"><span className={`grid h-8 w-6 place-items-center rounded-md text-xs ${connected ? "bg-primary text-white" : "bg-bg-light text-text-secondary"}`}>▮</span><div className="text-xs"><div className="font-semibold text-text">Device Status</div><div className={connected ? "font-semibold text-success" : "text-text-secondary"}>{connected ? "Connected" : "Offline"}</div></div></div>
+      <div className="hidden items-center gap-2 border-r border-line pr-6 sm:flex"><span className="text-xl text-text">□</span><div className="text-right text-xs"><div className="font-semibold text-text">{now.toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" })}</div><div className="font-semibold text-text">{now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></div></div>
+      <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-lg font-bold text-white" aria-label="User profile">●</div>
+    </div>
+  </div>;
 }
 
 function BottomNav() {
-  return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
-      <div className="flex items-center gap-1 rounded-full border border-line bg-surface/80 px-2 py-1.5 shadow-glow backdrop-blur-xl">
-        {NAV.map(({ to, label, Icon }) => (
-          <NavLink key={to} to={to} end={to === "/"} aria-label={label}
-            className={({ isActive }) =>
-              `relative flex h-12 w-14 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition ${
-                isActive ? "text-primary" : "text-text-secondary"
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <motion.span layoutId="tab-active" className="absolute inset-0 rounded-full bg-primary/10 ring-1 ring-primary/10" transition={{ type: "spring", stiffness: 400, damping: 32 }} />
-                )}
-                <Icon className="relative h-5 w-5" />
-                <span className="relative">{label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </div>
-    </nav>
-  );
+  return <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden"><div className="flex items-center gap-1 rounded-full border border-line bg-surface px-2 py-1.5 shadow-glow">{NAV.map(({ to, label, Icon }) => <NavLink key={to} to={to} end={to === "/"} aria-label={label} className={({ isActive }) => `flex h-12 w-14 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium ${isActive ? "bg-bg-light text-primary" : "text-text-secondary"}`}><Icon className="h-5 w-5" /><span>{label.replace("About CANOPIX", "About")}</span></NavLink>)}</div></nav>;
 }
 
 export default function Layout() {
-  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  return (
-    <div className="flex min-h-dvh">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <main className="min-w-0 flex-1 pb-28 md:pb-0">
-        <div className="border-b border-line bg-surface px-4 py-3 sm:px-6">
-          <div className="mx-auto flex max-w-[1440px] items-center justify-between">
-            <span className="text-sm font-medium text-text-secondary">CANOPIX Monitoring Console</span>
-            <span className="chip bg-bg-light text-primary"><span className="h-2 w-2 rounded-full bg-success" />System online</span>
-          </div>
-        </div>
-        <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:py-8">
-          <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12 }}>
-            <Outlet />
-          </motion.div>
-        </div>
-      </main>
-      <BottomNav />
-    </div>
-  );
+  return <div className="flex min-h-dvh"><Sidebar /><main className="min-w-0 flex-1 pb-28 md:pb-0"><Topbar /><div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 lg:py-7"><motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12 }}><Outlet /></motion.div></div></main><BottomNav /></div>;
 }

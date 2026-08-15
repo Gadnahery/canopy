@@ -10,75 +10,53 @@ import { RefreshIcon, TreeIcon } from "../components/icons";
 import type { Capture } from "../types";
 
 const activeStates = ["requested", "uploading", "uploaded", "processing"];
+const value = (n: number | null | undefined) => n == null ? "--" : `${n.toFixed(1)}%`;
 
-function density(value: number | null | undefined) {
-  if (value == null) return { label: "Awaiting analysis", tone: "text-text-secondary", note: "A completed capture will appear here." };
-  if (value >= 70) return { label: "High Canopy Density", tone: "text-primary", note: "The area is predominantly covered by tree canopy." };
-  if (value >= 40) return { label: "Moderate Canopy Density", tone: "text-warning", note: "The area has a balanced canopy and open-sky coverage." };
-  return { label: "Low Canopy Density", tone: "text-error", note: "The area has more open sky than canopy cover." };
+function density(n: number | null | undefined) {
+  if (n == null) return { label: "Awaiting analysis", short: "Waiting", note: "A completed capture will appear here.", tone: "text-text-secondary" };
+  if (n >= 70) return { label: "High Canopy Density", short: "High", note: "The area is predominantly covered by tree canopy.", tone: "text-primary" };
+  if (n >= 40) return { label: "Moderate Canopy Density", short: "Moderate", note: "The area has balanced canopy and open-sky coverage.", tone: "text-warning" };
+  return { label: "Low Canopy Density", short: "Low", note: "The area has more open sky than canopy cover.", tone: "text-error" };
 }
 
-function ProgressRing({ value }: { value: number | null | undefined }) {
-  const pct = value ?? 0;
-  return <div className="relative grid h-48 w-48 place-items-center rounded-full" style={{ background: `conic-gradient(#2E7D32 ${pct * 3.6}deg, #E5EEE5 0deg)` }}>
-    <div className="grid h-[calc(100%-14px)] w-[calc(100%-14px)] place-items-center rounded-full bg-surface text-center">
-      <div><div className="text-4xl font-bold tracking-tight text-primary">{value != null ? `${value.toFixed(1)}%` : "--"}</div><div className="mt-1 text-[11px] font-bold tracking-wider text-text-secondary">CANOPY COVER</div></div>
-    </div>
-  </div>;
+function ProgressRing({ pct }: { pct: number | null | undefined }) {
+  const progress = pct ?? 0;
+  return <div className="grid h-44 w-44 place-items-center rounded-full" style={{ background: `conic-gradient(#2E7D32 ${progress * 3.6}deg, #E5EEE5 0deg)` }}><div className="grid h-[calc(100%-14px)] w-[calc(100%-14px)] place-items-center rounded-full bg-surface text-center"><div><div className="text-4xl font-bold text-primary">{value(pct)}</div><div className="mt-1 text-[11px] font-bold tracking-wide text-text">CANOPY COVER</div></div></div></div>;
 }
 
 export default function Home() {
   const { captures, reload } = useCaptures();
   const devices = useDevices();
-  const [sel, setSel] = useState<Capture | null>(null);
-  const latest = captures.find((c) => c.status === "done" && c.canopy_pct != null) ?? captures[0];
-  const live = captures.some((c) => activeStates.includes(c.status));
+  const [selected, setSelected] = useState<Capture | null>(null);
+  const latest = captures.find((capture) => capture.status === "done" && capture.canopy_pct != null) ?? captures[0];
+  const live = captures.some((capture) => activeStates.includes(capture.status));
   const connected = devices.some(isOnline);
-  const state = density(latest?.canopy_pct);
   const image = latest?.image_path ? imageUrl(latest.image_path) : null;
+  const state = density(latest?.canopy_pct);
+  const completed = latest?.status === "done";
 
-  return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div><h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-text">Welcome to CANOPIX <TreeIcon className="h-6 w-6 text-primary" /></h1><p className="mt-1 text-sm text-text-secondary">Smart analysis for accurate forest canopy measurement</p></div>
-        <button onClick={reload} className="btn-ghost" aria-label="Refresh dashboard"><RefreshIcon className="h-5 w-5" />Refresh data</button>
-      </header>
+  return <div className="space-y-5">
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="flex items-center gap-2 text-[22px] font-bold tracking-tight text-text">Welcome to CANOPIX <TreeIcon className="h-5 w-5 text-primary" /></h1><p className="mt-1 text-xs text-text-secondary">Smart analysis for accurate forest canopy measurement</p></div><button onClick={reload} className="btn-ghost text-xs" aria-label="Refresh data"><RefreshIcon className="h-4 w-4" />Refresh</button></header>
+    {!isConfigured && <div className="card border-warning/30 bg-warning/10 p-4 text-sm text-text">Supabase is not configured. Add the environment variables to display live hardware data.</div>}
 
-      {!isConfigured && <div className="card border-warning/30 bg-warning/10 p-4 text-sm text-text">Supabase is not configured. Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to display live hardware data.</div>}
+    <section className="card overflow-hidden p-0"><div className="grid divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4"><FlowStep mark="D" title="DEVICE" result={connected ? "Connected" : "Offline"} done={connected} /><FlowStep mark="I" title="IMAGE RECEIVED" result={latest ? new Date(latest.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Waiting"} done={!!latest} /><FlowStep mark="P" title="PROCESSING" result={live ? "In progress" : completed ? "Completed" : "Waiting"} done={!live && completed} /><FlowStep mark="A" title="ANALYSIS" result={completed ? "Complete" : "Pending"} done={completed} /></div></section>
 
-      <section className="card overflow-hidden p-0">
-        <div className="grid divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-          <WorkflowStep icon="◉" title="DEVICE" value={connected ? "Connected" : "Offline"} complete={connected} />
-          <WorkflowStep icon="▣" title="IMAGE RECEIVED" value={latest ? new Date(latest.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Waiting"} complete={!!latest} />
-          <WorkflowStep icon={live ? "◌" : "◉"} title="PROCESSING" value={live ? "In progress" : latest?.status === "done" ? "Completed" : "Waiting"} complete={!live && latest?.status === "done"} />
-          <WorkflowStep icon="✓" title="ANALYSIS" value={latest?.status === "done" ? "Complete" : "Pending"} complete={latest?.status === "done"} />
-        </div>
-      </section>
+    <section className="grid gap-4 xl:grid-cols-[1.28fr_1fr_1.33fr]">
+      <article className="card p-4"><Heading title="Latest capture" tag={latest ? "New" : undefined} />{image ? <img onClick={() => latest && setSelected(latest)} src={image} alt="Latest canopy image received from the device" className="mt-3 h-56 w-full cursor-pointer rounded-md object-cover" /> : <ImageEmpty label="Waiting for a hardware image capture" />}<p className="mt-3 text-[11px] text-text-secondary">{latest ? `${new Date(latest.created_at).toLocaleString()} | Image received from CANOPIX device` : "Images are captured by the physical CANOPIX hardware."}</p></article>
+      <article className="card flex flex-col items-center p-4 text-center"><Heading title="Analysis result" /><div className="mt-4"><ProgressRing pct={latest?.canopy_pct} /></div><div className="mt-3 w-full rounded-md border border-line bg-bg-light p-3 text-left"><div className={`font-semibold ${state.tone}`}>{state.label}</div><p className="mt-1 text-[11px] text-text-secondary">{state.note}</p></div></article>
+      <article className="card p-4"><Heading title="Canopy visualization" /><div className="relative mt-3">{image ? <><img onClick={() => latest && setSelected(latest)} src={image} alt="Canopy visualization" className="h-56 w-full cursor-pointer rounded-md object-cover saturate-[1.4] contrast-110" /><div className="pointer-events-none absolute inset-0 rounded-md bg-primary/10 mix-blend-multiply" /></> : <ImageEmpty label="Visualization will appear after analysis" />}</div><div className="mt-3 flex gap-5 text-[11px] text-text-secondary"><span><i className="mr-1 inline-block h-3 w-3 rounded-sm bg-success align-middle" />Canopy {latest?.canopy_pct != null && `(${value(latest.canopy_pct)})`}</span><span><i className="mr-1 inline-block h-3 w-3 rounded-sm border border-line bg-bg-light align-middle" />Open Sky {latest?.canopy_pct != null && `(${value(100 - latest.canopy_pct)})`}</span></div></article>
+    </section>
 
-      <section className="grid gap-5 xl:grid-cols-12">
-        <article className="card p-4 sm:p-5 xl:col-span-4">
-          <CardHeading title="Latest capture" badge={latest ? "New" : undefined} />
-          {image ? <img onClick={() => latest && setSel(latest)} src={image} alt="Latest canopy capture" className="mt-4 h-64 w-full cursor-pointer rounded-xl object-cover" /> : <EmptyImage label="Waiting for a hardware image capture" />}
-          <p className="mt-3 text-xs text-text-secondary">{latest ? `${new Date(latest.created_at).toLocaleString()} · Image received from CANOPIX device` : "The image is captured by the physical CANOPIX hardware."}</p>
-        </article>
-
-        <article className="card flex flex-col items-center p-4 text-center sm:p-5 xl:col-span-3"><CardHeading title="Analysis result" /><div className="mt-4"><ProgressRing value={latest?.canopy_pct} /></div><div className="mt-4 w-full rounded-xl border border-line bg-bg-light p-3 text-left"><div className={`font-semibold ${state.tone}`}>{state.label}</div><p className="mt-1 text-xs text-text-secondary">{state.note}</p></div></article>
-
-        <article className="card p-4 sm:p-5 xl:col-span-5"><CardHeading title="Canopy visualization" /><div className="relative mt-4">{image ? <><img onClick={() => latest && setSel(latest)} src={image} alt="Processed canopy visualization" className="h-64 w-full cursor-pointer rounded-xl object-cover saturate-[1.35] contrast-110" /><div className="pointer-events-none absolute inset-0 rounded-xl bg-primary/10 mix-blend-multiply" /></> : <EmptyImage label="Processed visualization will appear after analysis" />}</div><div className="mt-3 flex gap-5 text-xs text-text-secondary"><span><i className="mr-1 inline-block h-3 w-3 rounded-sm bg-success align-middle" />Canopy {latest?.canopy_pct != null ? `(${latest.canopy_pct.toFixed(1)}%)` : ""}</span><span><i className="mr-1 inline-block h-3 w-3 rounded-sm border border-line bg-bg-light align-middle" />Open sky {latest?.canopy_pct != null ? `(${(100 - latest.canopy_pct).toFixed(1)}%)` : ""}</span></div></article>
-      </section>
-
-      <section className="grid gap-5 lg:grid-cols-2">
-        <article className="card p-5"><CardHeading title="Measurement summary" /><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4"><Summary label="Canopy cover" value={latest?.canopy_pct != null ? `${latest.canopy_pct.toFixed(1)}%` : "--"} /><Summary label="Open sky" value={latest?.canopy_pct != null ? `${(100 - latest.canopy_pct).toFixed(1)}%` : "--"} /><Summary label="Density status" value={latest?.canopy_pct != null ? state.label.replace(" Canopy Density", "") : "--"} /><Summary label="Analysis quality" value={latest?.status === "done" ? "Good" : "Waiting"} /></div><div className="mt-4 rounded-lg bg-bg-light px-3 py-2 text-xs text-success">✓ {latest?.status === "done" ? "Analysis completed successfully and synced with device." : "The workflow will update automatically when the hardware sends a capture."}</div></article>
-        <article className="card p-5"><div className="flex items-center justify-between"><CardHeading title="Recent analyses" /><Link to="/history" className="text-xs font-semibold text-primary hover:underline">View all</Link></div><div className="mt-3 overflow-x-auto"><table className="w-full text-left text-xs"><thead className="border-b border-line text-text-secondary"><tr><th className="pb-2 font-medium">Date & time</th><th className="pb-2 font-medium">Canopy cover</th><th className="pb-2 font-medium">Status</th></tr></thead><tbody>{captures.slice(0, 4).map((c) => <tr key={c.id} className="border-b border-line/70 last:border-0"><td className="py-2.5 text-text-secondary">{new Date(c.created_at).toLocaleString()}</td><td className="py-2.5 font-medium text-text">{c.canopy_pct != null ? `${c.canopy_pct.toFixed(1)}%` : "--"}</td><td className="py-2.5"><span className={c.status === "done" ? "text-success" : "text-warning"}>● {c.status === "done" ? density(c.canopy_pct).label.replace(" Canopy Density", "") : c.status}</span></td></tr>)}{captures.length === 0 && <tr><td colSpan={3} className="py-8 text-center text-text-secondary">No analyses yet.</td></tr>}</tbody></table></div></article>
-      </section>
-
-      <section className="card p-5"><CardHeading title="Canopy cover over time" /><div className="mt-4"><TrendChart captures={captures} height={260} /></div></section>
-      <AnimatePresence>{sel && <CaptureDetail capture={sel} onClose={() => setSel(null)} />}</AnimatePresence>
-    </div>
-  );
+    <section className="grid gap-4 lg:grid-cols-2">
+      <article className="card p-4"><Heading title="Measurement summary" /><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><Metric icon="C" label="Canopy Cover" result={value(latest?.canopy_pct)} /><Metric icon="S" label="Open Sky" result={value(latest?.canopy_pct == null ? null : 100 - latest.canopy_pct)} /><Metric icon="D" label="Density Status" result={state.short} /><Metric icon="Q" label="Analysis Quality" result={completed ? "Good" : "Waiting"} /></div><div className="mt-3 rounded-md bg-bg-light px-3 py-2 text-[11px] text-success">Analysis {completed ? "completed successfully and synced with device." : "will update when the hardware sends a capture."}</div></article>
+      <article className="card p-4"><div className="flex items-center justify-between"><Heading title="Recent analyses" /><Link to="/history" className="text-[11px] font-semibold text-primary hover:underline">View All</Link></div><div className="mt-3 overflow-x-auto"><table className="w-full min-w-[360px] text-left text-[11px]"><thead className="border-b border-line bg-bg-light text-text-secondary"><tr><th className="px-2 py-2 font-medium">Date & Time</th><th className="px-2 py-2 font-medium">Canopy Cover</th><th className="px-2 py-2 font-medium">Status</th></tr></thead><tbody>{captures.slice(0, 5).map((capture) => <tr key={capture.id} className="border-b border-line/70 last:border-0"><td className="px-2 py-2 text-text-secondary">{new Date(capture.created_at).toLocaleString()}</td><td className="px-2 py-2 font-medium text-text">{value(capture.canopy_pct)}</td><td className={`px-2 py-2 font-medium ${capture.status === "done" ? "text-success" : "text-warning"}`}>{capture.status === "done" ? density(capture.canopy_pct).short : capture.status}</td></tr>)}{captures.length === 0 && <tr><td colSpan={3} className="px-2 py-8 text-center text-text-secondary">No analyses yet.</td></tr>}</tbody></table></div></article>
+    </section>
+    <section className="card p-5"><Heading title="Canopy cover over time" /><div className="mt-4"><TrendChart captures={captures} height={260} /></div></section>
+    <AnimatePresence>{selected && <CaptureDetail capture={selected} onClose={() => setSelected(null)} />}</AnimatePresence>
+  </div>;
 }
 
-function CardHeading({ title, badge }: { title: string; badge?: string }) { return <div className="flex items-center justify-between"><h2 className="text-sm font-bold uppercase tracking-wide text-text">{title}</h2>{badge && <span className="chip bg-bg-light text-success">{badge}</span>}</div>; }
-function EmptyImage({ label }: { label: string }) { return <div className="mt-4 grid h-64 place-items-center rounded-xl border border-dashed border-line bg-bg-light p-6 text-center text-sm text-text-secondary">{label}</div>; }
-function WorkflowStep({ icon, title, value, complete }: { icon: string; title: string; value: string; complete: boolean }) { return <div className="flex items-center gap-3 p-4"><span className={`grid h-10 w-10 place-items-center rounded-full border-2 text-xl ${complete ? "border-success bg-bg-light text-success" : "border-line bg-surface text-text-secondary"}`}>{icon}</span><div><div className="text-[11px] font-bold tracking-wide text-text">{title}</div><div className={complete ? "text-sm font-semibold text-success" : "text-sm font-medium text-text-secondary"}>{value}</div></div></div>; }
-function Summary({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-line bg-surface p-3 text-center"><div className="text-[11px] font-medium text-text-secondary">{label}</div><div className="mt-1 text-base font-bold text-primary">{value}</div></div>; }
+function Heading({ title, tag }: { title: string; tag?: string }) { return <div className="flex items-center justify-between"><h2 className="text-xs font-bold uppercase tracking-wide text-text">{title}</h2>{tag && <span className="rounded-full bg-bg-light px-2 py-0.5 text-[11px] font-semibold text-success">{tag}</span>}</div>; }
+function ImageEmpty({ label }: { label: string }) { return <div className="mt-3 grid h-56 place-items-center rounded-md border border-dashed border-line bg-bg-light px-6 text-center text-sm text-text-secondary">{label}</div>; }
+function FlowStep({ mark, title, result, done }: { mark: string; title: string; result: string; done: boolean }) { return <div className="relative flex items-center gap-3 p-4 lg:after:absolute lg:after:right-0 lg:after:top-1/2 lg:after:-translate-y-1/2 lg:after:text-text-secondary lg:after:content-['>'] last:after:hidden"><span className={`grid h-9 w-9 place-items-center rounded-full border-2 text-xs font-bold ${done ? "border-success bg-bg-light text-success" : "border-line text-text-secondary"}`}>{mark}</span><div><div className="text-[10px] font-bold tracking-wide text-text">{title}</div><div className={done ? "text-xs font-semibold text-success" : "text-xs font-medium text-text-secondary"}>{result}</div></div></div>; }
+function Metric({ icon, label, result }: { icon: string; label: string; result: string }) { return <div className="rounded-md border border-line bg-surface p-2 text-center"><span className="grid mx-auto h-9 w-9 place-items-center rounded-full bg-bg-light text-xs font-bold text-primary">{icon}</span><div className="mt-1.5 text-[10px] text-text-secondary">{label}</div><div className="mt-0.5 text-lg font-bold text-primary">{result}</div></div>; }
