@@ -22,6 +22,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BUCKET = "captures";
 const MAX_WIDTH = 640; // downscale for speed; canopy ratio is scale-invariant
+const CANOPY_VALIDATOR_URL = Deno.env.get("CANOPY_VALIDATOR_URL");
+const CANOPY_VALIDATOR_TOKEN = Deno.env.get("CANOPY_VALIDATOR_TOKEN");
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -46,6 +48,27 @@ function otsu(hist: number[], total: number): number {
     if (between > maxVar) { maxVar = between; threshold = t; }
   }
   return threshold;
+}
+
+type ValidationResult = {
+  valid: boolean;
+  confidence: number;
+  predicted_label: string;
+  rejection_reason: string | null;
+};
+
+/** Calls the long-running Python CLIP service before the Otsu calculation. */
+async function validateCanopyImage(bytes: Uint8Array): Promise<ValidationResult> {
+  if (!CANOPY_VALIDATOR_URL) {
+    throw new Error("CANOPY_VALIDATOR_URL is not configured");
+  }
+  const form = new FormData();
+  form.append("image", new Blob([bytes], { type: "image/jpeg" }), "capture.jpg");
+  const headers: HeadersInit = {};
+  if (CANOPY_VALIDATOR_TOKEN) headers.Authorization = `Bearer ${CANOPY_VALIDATOR_TOKEN}`;
+  const response = await fetch(CANOPY_VALIDATOR_URL, { method: "POST", headers, body: form });
+  if (!response.ok) throw new Error(`canopy validation failed: ${await response.text()}`);
+  return await response.json() as ValidationResult;
 }
 
 Deno.serve(async (req) => {
@@ -88,6 +111,31 @@ Deno.serve(async (req) => {
     if (dlErr) throw dlErr;
     const bytes = new Uint8Array(await blob.arrayBuffer());
 
+    // Reject any non-canopy image before calculating a canopy percentage.
+    const validation = await validateCanopyImage(bytes);
+    if (!validation.valid) {
+      const rejectionReason = validation.rejection_reason ?? "not a valid canopy image";
+      const { data: rejected, error: rejectErr } = await db.from("captures").update({
+        status: "invalid",
+        canopy_pct: null,
+        leaf_pixels: null,
+        sky_pixels: null,
+        total_pixels: null,
+        width: null,
+        height: null,
+        method: "clip-validation",
+        threshold: null,
+        validation_label: validation.predicted_label,
+        validation_confidence: validation.confidence,
+        error: rejectionReason,
+        processed_at: new Date().toISOString(),
+      }).eq("id", captureId).select().single();
+      if (rejectErr) throw rejectErr;
+      return new Response(JSON.stringify({ ok: false, valid: false, error: rejectionReason, capture: rejected }), {
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     // Decode + resize
     const decoded = await decode(bytes);
     const img = decoded instanceof Image ? decoded : decoded.frames[0];
@@ -114,8 +162,10 @@ Deno.serve(async (req) => {
       sky_pixels: sky,
       total_pixels: total,
       width, height,
-      method: "otsu-blue",
+      method: "clip+otsu-blue",
       threshold,
+      validation_label: validation.predicted_label,
+      validation_confidence: validation.confidence,
       error: null,
       processed_at: new Date().toISOString(),
     }).eq("id", captureId).select().single();

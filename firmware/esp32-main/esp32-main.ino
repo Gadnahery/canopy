@@ -129,7 +129,8 @@ void renderStatus(const String& status, float canopy) {
     lcdLine(0, "Canopy Cover:");
     lcdLine(1, String(canopy, 1) + " %");
     return;
-  } else if (status == "error")    lcdLine(0, "Error - retry");
+  } else if (status == "invalid")  lcdLine(0, "Invalid image");
+  else if (status == "error")      lcdLine(0, "Error - retry");
   lcdLine(1, "");
 }
 

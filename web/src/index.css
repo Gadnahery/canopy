@@ -31,7 +31,17 @@
   .btn-ghost   { @apply btn border border-line bg-surface text-text-secondary hover:bg-bg-light hover:text-text; }
 }
 
+
 /* respect users who prefer less motion */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
+
+@keyframes flash {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+.animate-flash-1 { animation: flash 1.4s infinite; }
+.animate-flash-2 { animation: flash 1.4s infinite 0.2s; }
+.animate-flash-3 { animation: flash 1.4s infinite 0.4s; }
+

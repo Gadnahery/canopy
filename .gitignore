@@ -32,3 +32,12 @@ Thumbs.db
 
 # Ignore project book content (large docs/assets)
 projectbook/
+
+# ---- python ----
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+

@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import type { Capture } from "../types";
 import { imageUrl, supabase, BUCKET } from "../lib/supabase";
 import StatusBadge from "./StatusBadge";
+import { LoadingDots } from "./icons";
+
 
 function Row({ k, v }: { k: string; v: string }) {
   return (
@@ -70,7 +72,7 @@ export default function CaptureDetail({ capture, onClose }: { capture: Capture; 
             {capture.error && <div className="mt-3 rounded-xl bg-rose-500/10 px-3 py-2 text-xs text-rose-300">{capture.error}</div>}
 
             <button onClick={reprocess} disabled={busy || !capture.image_path} className="btn-primary mt-4 w-full disabled:opacity-40">
-              {busy ? "Working…" : "Reprocess image"}
+              {busy ? <span className="inline-flex items-center">Working<LoadingDots /></span> : "Reprocess image"}
             </button>
             {!confirmDel ? (
               <button onClick={() => setConfirmDel(true)} disabled={busy}

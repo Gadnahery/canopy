@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { HomeIcon, HistoryIcon, ChartIcon, InfoIcon, TreeIcon } from "./icons";
+import { CalendarIcon, DeviceIcon, HomeIcon, HistoryIcon, ChartIcon, InfoIcon, TreeIcon, UserIcon } from "./icons";
 import { isOnline, useDevices } from "../hooks/useDevices";
 
 export const NAV = [
@@ -33,9 +33,9 @@ function Topbar() {
   const now = new Date();
   return <div className="border-b border-line bg-surface px-4 py-3 sm:px-6">
     <div className="mx-auto flex max-w-[1440px] items-center justify-end gap-5 sm:gap-8">
-      <div className="hidden items-center gap-2 border-r border-line pr-6 sm:flex"><span className={`grid h-8 w-6 place-items-center rounded-md text-xs ${connected ? "bg-primary text-white" : "bg-bg-light text-text-secondary"}`}>▮</span><div className="text-xs"><div className="font-semibold text-text">Device Status</div><div className={connected ? "font-semibold text-success" : "text-text-secondary"}>{connected ? "Connected" : "Offline"}</div></div></div>
-      <div className="hidden items-center gap-2 border-r border-line pr-6 sm:flex"><span className="text-xl text-text">□</span><div className="text-right text-xs"><div className="font-semibold text-text">{now.toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" })}</div><div className="font-semibold text-text">{now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></div></div>
-      <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-lg font-bold text-white" aria-label="User profile">●</div>
+      <div className="hidden items-center gap-2 border-r border-line pr-6 sm:flex"><span className={`grid h-8 w-6 place-items-center rounded-md ${connected ? "bg-primary text-white" : "bg-bg-light text-text-secondary"}`}><DeviceIcon className="h-4 w-4" /></span><div className="text-xs"><div className="font-semibold text-text">Device Status</div><div className={connected ? "font-semibold text-success" : "text-text-secondary"}>{connected ? "Connected" : "Offline"}</div></div></div>
+      <div className="hidden items-center gap-2 border-r border-line pr-6 sm:flex"><CalendarIcon className="h-6 w-6 text-text" /><div className="text-right text-xs"><div className="font-semibold text-text">{now.toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" })}</div><div className="font-semibold text-text">{now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></div></div>
+      <div className="grid h-10 w-10 place-items-center rounded-full bg-primary text-white" aria-label="User profile"><UserIcon className="h-6 w-6" /></div>
     </div>
   </div>;
 }
