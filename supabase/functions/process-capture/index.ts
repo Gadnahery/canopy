@@ -63,7 +63,10 @@ type ValidationResult = {
 async function validateCanopyImage(bytes: Uint8Array): Promise<ValidationResult> {
   if (HUGGINGFACE_API_TOKEN) {
     const model = "openai/clip-vit-base-patch32";
-    const url = `https://api-inference.huggingface.co/models/${model}`;
+    const hostnames = [
+      "api-inference.huggingface.co",
+      "api.huggingface.co"
+    ];
     
     // Convert Uint8Array to base64
     let binary = "";
@@ -81,22 +84,39 @@ async function validateCanopyImage(bytes: Uint8Array): Promise<ValidationResult>
       "a blurry, dark, or unclear photo",
     ];
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${HUGGINGFACE_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        inputs: {
-          image: base64,
-          candidate_labels: labels,
-        }
-      }),
-    });
+    let lastError = null;
+    let response: Response | null = null;
 
-    if (!response.ok) {
-      throw new Error(`Hugging Face validation failed: ${await response.text()}`);
+    for (const host of hostnames) {
+      try {
+        const url = `https://${host}/models/${model}`;
+        response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${HUGGINGFACE_API_TOKEN}`,
+            "Content-Type": "application/json",
+            "x-wait-for-model": "true",
+          },
+          body: JSON.stringify({
+            inputs: {
+              image: base64,
+              candidate_labels: labels,
+            }
+          }),
+        });
+        if (response.ok) {
+          lastError = null;
+          break;
+        } else {
+          lastError = new Error(`Hugging Face validation failed on ${host}: ${await response.text()}`);
+        }
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (lastError || !response) {
+      throw lastError || new Error("Failed to contact Hugging Face API");
     }
 
     const result = await response.json();
