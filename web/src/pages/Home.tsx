@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { useCaptures } from "../hooks/useCaptures";
 import { useDevices, isOnline } from "../hooks/useDevices";
-import { isConfigured, imageUrl } from "../lib/supabase";
+import { isConfigured, imageUrl, supabase } from "../lib/supabase";
 import CaptureDetail from "../components/CaptureDetail";
 import TrendChart from "../components/TrendChart";
 import { CameraIcon, CheckCircleIcon, CloudIcon, DeviceIcon, RefreshIcon, SpinnerIcon, TargetIcon, TreeIcon, LoadingDots } from "../components/icons";
@@ -23,6 +23,169 @@ function density(n: number | null | undefined) {
 function ProgressRing({ pct }: { pct: number | null | undefined }) {
   const progress = pct ?? 0;
   return <div className="grid h-44 w-44 place-items-center rounded-full" style={{ background: `conic-gradient(#2E7D32 ${progress * 3.6}deg, #E5EEE5 0deg)` }}><div className="grid h-[calc(100%-14px)] w-[calc(100%-14px)] place-items-center rounded-full bg-surface text-center"><div><div className="text-4xl font-bold text-primary">{value(pct)}</div><div className="mt-1 text-[11px] font-bold tracking-wide text-text">CANOPY COVER</div></div></div></div>;
+}
+
+function LiveViewHero({ latest, connected, live }: { latest: Capture | undefined; connected: boolean; live: boolean }) {
+  const [triggering, setTriggering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const image = latest?.image_path ? imageUrl(latest.image_path) : null;
+
+  async function handleTrigger() {
+    setTriggering(true);
+    setError(null);
+    try {
+      const { error: err } = await supabase
+        .from("captures")
+        .insert({ device_id: "canopy-01", status: "requested" });
+      if (err) throw err;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to trigger capture");
+    } finally {
+      setTimeout(() => setTriggering(false), 2000);
+    }
+  }
+
+  return (
+    <article className="card relative overflow-hidden bg-slate-950 text-white p-5 border-slate-800 shadow-xl">
+      <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+      
+      <div className="relative z-10 flex flex-col lg:flex-row gap-6 items-stretch">
+        {/* Left Side: Live View Finder */}
+        <div className="relative flex-1 aspect-[16/10] bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-inner group min-h-[220px]">
+          {image ? (
+            <img src={image} alt="Live view" className={`h-full w-full object-cover transition duration-700 ${live ? "scale-[1.01]" : ""}`} />
+          ) : (
+            <div className="flex h-full items-center justify-center text-slate-500">
+              <CameraIcon className="h-12 w-12 stroke-[1.2]" />
+            </div>
+          )}
+          
+          {/* Rule of Thirds Gridlines */}
+          <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-20">
+            <div className="border-r border-b border-white/30" />
+            <div className="border-r border-b border-white/30" />
+            <div className="border-b border-white/30" />
+            <div className="border-r border-b border-white/30" />
+            <div className="border-r border-b border-white/30" />
+            <div className="border-b border-white/30" />
+            <div className="border-r border-white/30" />
+            <div className="border-r border-white/30" />
+            <div className="" />
+          </div>
+
+          {/* Central Aiming Reticle */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="w-12 h-12 border border-white/30 rounded-full flex items-center justify-center">
+              <div className="w-1 h-1 bg-white/50 rounded-full" />
+            </div>
+          </div>
+
+          {/* Top Info Bar Overlay */}
+          <div className="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-none">
+            <div className="flex items-center gap-2">
+              <span className={`flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider backdrop-blur-md border ${
+                connected 
+                  ? "bg-rose-500/20 text-rose-400 border-rose-500/30" 
+                  : "bg-slate-900/60 text-slate-400 border-slate-800"
+              }`}>
+                {connected && <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />}
+                {connected ? "LIVE" : "DEVICE OFFLINE"}
+              </span>
+              <span className="bg-slate-900/60 border border-slate-800 text-[9px] text-slate-300 font-mono px-2 py-0.5 rounded-md backdrop-blur-md">
+                {latest ? new Date(latest.created_at).toLocaleTimeString() : "--:--:--"}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-1.5 bg-slate-900/60 border border-slate-800 text-[9px] text-slate-300 font-mono px-2 py-0.5 rounded-md backdrop-blur-md">
+              <span>ISO 100</span>
+              <span>•</span>
+              <span>F/2.2</span>
+              <span>•</span>
+              <span>SVGA</span>
+            </div>
+          </div>
+
+          {/* Bottom Info Bar Overlay */}
+          <div className="absolute bottom-3 inset-x-3 flex items-center justify-between pointer-events-none">
+            <div className="bg-slate-900/60 border border-slate-800 text-[9px] text-slate-300 font-mono px-2 py-0.5 rounded-md backdrop-blur-md">
+              DEV: canopy-01
+            </div>
+            <div className="bg-slate-900/60 border border-slate-800 text-[9px] text-slate-300 font-mono px-2 py-0.5 rounded-md backdrop-blur-md">
+              {latest ? `${latest.width || 800}x${latest.height || 600}` : "800x600"}
+            </div>
+          </div>
+
+          {/* Processing overlay */}
+          {live && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[1px] text-white">
+              <SpinnerIcon className="h-10 w-10 animate-spin text-primary" />
+              <span className="mt-2.5 text-xs font-semibold drop-shadow-md inline-flex items-center">
+                Processing new capture<LoadingDots />
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Right Side: Quick Stats & Trigger Actions */}
+        <div className="flex flex-col justify-between w-full lg:w-80">
+          <div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold tracking-wider text-slate-500 uppercase">Field Monitor</h2>
+              <span className={`inline-flex h-2.5 w-2.5 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-slate-500"}`} />
+            </div>
+            
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              CANOPIX-CAM
+              <span className="text-[9px] font-mono border border-slate-800 text-slate-500 px-1.5 py-0.5 rounded-md">V1.0</span>
+            </h1>
+            
+            <p className="mt-2 text-xs text-slate-400 leading-relaxed">
+              Wirelessly monitor canopy density, trigger ESP32-CAM captures, and run automated segmentation.
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 text-slate-300">
+              <div className="bg-slate-900/50 border border-slate-800 p-2.5 rounded-xl">
+                <div className="text-[9px] text-slate-500 font-medium">LATEST COVER</div>
+                <div className="text-lg font-bold text-emerald-400 mt-0.5">{value(latest?.canopy_pct)}</div>
+              </div>
+              <div className="bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
+                <div className="text-[9px] text-slate-500 font-medium">DEVICE STATUS</div>
+                <div className="text-lg font-bold mt-0.5 text-slate-200">
+                  {connected ? "Online" : "Offline"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-2">
+            <button
+              onClick={handleTrigger}
+              disabled={triggering || live}
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-600 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-xl text-xs transition duration-200 shadow-lg shadow-primary/20 active:scale-[0.98]"
+            >
+              {triggering ? (
+                <span className="inline-flex items-center">
+                  Triggering Hardware<LoadingDots />
+                </span>
+              ) : live ? (
+                <span className="inline-flex items-center">
+                  Processing Capture<LoadingDots />
+                </span>
+              ) : (
+                <>
+                  <CameraIcon className="h-4 w-4" />
+                  Trigger Remote Capture
+                </>
+              )}
+            </button>
+            {error && <p className="text-center text-[10px] text-rose-400 font-medium">{error}</p>}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
 }
 
 export default function Home() {
@@ -45,6 +208,9 @@ export default function Home() {
     {!isConfigured && <div className="card border-warning/30 bg-warning/10 p-4 text-sm text-text">Supabase is not configured. Add the environment variables to display live hardware data.</div>}
 
     <section className="card overflow-hidden p-0"><div className="grid divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4"><FlowStep Icon={DeviceIcon} title="DEVICE" result={connected ? "Connected" : "Offline"} done={connected} /><FlowStep Icon={CameraIcon} title="IMAGE RECEIVED" result={latest ? new Date(latest.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Waiting"} done={!!latest} /><FlowStep Icon={SpinnerIcon} title="PROCESSING" result={live ? <span className="inline-flex items-center">In progress<LoadingDots /></span> : completed ? "Completed" : "Waiting"} done={!live && completed} spinning={live} /><FlowStep Icon={CheckCircleIcon} title="ANALYSIS" result={completed ? "Complete" : "Pending"} done={completed} /></div></section>
+
+    <LiveViewHero latest={latest} connected={connected} live={live} />
+
 
     <section className="grid gap-4 xl:grid-cols-[1.28fr_1fr_1.33fr]">
       <article className="card p-4">
