@@ -119,11 +119,25 @@ function LiveViewHero({ latest, connected, live }: { latest: Capture | undefined
 
           {/* Processing overlay */}
           {live && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[1px] text-white">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/55 backdrop-blur-[1px] text-white">
               <SpinnerIcon className="h-10 w-10 animate-spin text-primary" />
               <span className="mt-2.5 text-xs font-semibold drop-shadow-md inline-flex items-center">
                 Processing new capture<LoadingDots />
               </span>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (latest) {
+                    await supabase
+                      .from("captures")
+                      .update({ status: "error", error: "Capture cancelled by user" })
+                      .eq("id", latest.id);
+                  }
+                }}
+                className="mt-3.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-semibold transition pointer-events-auto"
+              >
+                Cancel Process
+              </button>
             </div>
           )}
         </div>
@@ -195,7 +209,7 @@ export default function Home() {
   const devices = useDevices();
   const [selected, setSelected] = useState<Capture | null>(null);
   const latest = captures[0];
-  const live = captures.some((capture) => activeStates.includes(capture.status));
+  const live = latest && activeStates.includes(latest.status);
   const connected = devices.some(isOnline);
   const image = latest?.image_path ? imageUrl(latest.image_path) : null;
   const state = latest?.status === "invalid"
@@ -222,9 +236,23 @@ export default function Home() {
             <>
               <img onClick={() => latest && setSelected(latest)} src={image} alt="Latest canopy image received from the device" className={`h-56 w-full cursor-pointer rounded-md object-cover ${live ? "opacity-60 blur-[1px]" : ""}`} />
               {live && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/25 rounded-md text-white backdrop-blur-[1px]">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 rounded-md text-white backdrop-blur-[1px]">
                   <SpinnerIcon className="h-8 w-8 animate-spin text-white" />
                   <span className="mt-2 text-xs font-semibold drop-shadow-md inline-flex items-center">Processing image<LoadingDots /></span>
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (latest) {
+                        await supabase
+                          .from("captures")
+                          .update({ status: "error", error: "Capture cancelled by user" })
+                          .eq("id", latest.id);
+                      }
+                    }}
+                    className="mt-3 px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-[10px] font-semibold transition"
+                  >
+                    Cancel Process
+                  </button>
                 </div>
               )}
             </>
