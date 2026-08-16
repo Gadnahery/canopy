@@ -162,7 +162,7 @@ function LiveViewHero({ latest, connected, live }: { latest: Capture | undefined
           <div className="mt-5 space-y-2">
             <button
               onClick={handleTrigger}
-              disabled={triggering || live}
+              disabled={triggering || live || !connected}
               className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-600 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-xl text-xs transition duration-200 shadow-lg shadow-primary/20 active:scale-[0.98]"
             >
               {triggering ? (
@@ -173,6 +173,8 @@ function LiveViewHero({ latest, connected, live }: { latest: Capture | undefined
                 <span className="inline-flex items-center">
                   Processing Capture<LoadingDots />
                 </span>
+              ) : !connected ? (
+                <span>Device Offline (Capture Disabled)</span>
               ) : (
                 <>
                   <CameraIcon className="h-4 w-4" />

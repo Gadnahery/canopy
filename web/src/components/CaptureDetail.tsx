@@ -9,8 +9,8 @@ import { LoadingDots } from "./icons";
 function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between border-b border-line/70 py-2 text-sm">
-      <span className="text-white/40">{k}</span>
-      <span className="tabular-nums text-white/85">{v}</span>
+      <span className="text-text-secondary">{k}</span>
+      <span className="tabular-nums text-text">{v}</span>
     </div>
   );
 }
@@ -47,17 +47,17 @@ export default function CaptureDetail({ capture, onClose }: { capture: Capture; 
         className="card w-full max-w-2xl overflow-hidden rounded-b-none sm:rounded-3xl" onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <div className="flex items-center gap-3"><h3 className="text-sm font-semibold text-white">Capture detail</h3><StatusBadge status={capture.status} /></div>
-          <button onClick={onClose} className="rounded-xl px-2 py-1 text-white/40 hover:bg-white/5 hover:text-white">✕</button>
+          <div className="flex items-center gap-3"><h3 className="text-sm font-semibold text-text">Capture detail</h3><StatusBadge status={capture.status} /></div>
+          <button onClick={onClose} className="rounded-xl px-2 py-1 text-text-secondary hover:bg-bg-light hover:text-text">✕</button>
         </div>
 
         <div className="grid gap-5 p-5 sm:grid-cols-2">
           <div>
             {url ? <img src={url} alt="capture" className="w-full rounded-2xl ring-1 ring-line" />
-                 : <div className="flex aspect-video items-center justify-center rounded-2xl bg-raised text-white/30">no image</div>}
+                 : <div className="flex aspect-video items-center justify-center rounded-2xl bg-raised text-text-secondary">no image</div>}
             <div className="mt-4 text-center">
-              <div className="text-[11px] uppercase tracking-wider text-white/40">Canopy cover</div>
-              <div className="text-5xl font-bold tabular-nums text-forest-300">{capture.canopy_pct != null ? `${capture.canopy_pct.toFixed(1)}%` : "—"}</div>
+              <div className="text-[11px] uppercase tracking-wider text-text-secondary">Canopy cover</div>
+              <div className="text-5xl font-bold tabular-nums text-success">{capture.canopy_pct != null ? `${capture.canopy_pct.toFixed(1)}%` : "—"}</div>
             </div>
           </div>
           <div>
@@ -69,14 +69,14 @@ export default function CaptureDetail({ capture, onClose }: { capture: Capture; 
             <Row k="Leaf px" v={capture.leaf_pixels?.toLocaleString() ?? "—"} />
             <Row k="Sky px" v={capture.sky_pixels?.toLocaleString() ?? "—"} />
             <Row k="Resolution" v={capture.width && capture.height ? `${capture.width}×${capture.height}` : "—"} />
-            {capture.error && <div className="mt-3 rounded-xl bg-rose-500/10 px-3 py-2 text-xs text-rose-300">{capture.error}</div>}
+            {capture.error && <div className="mt-3 rounded-xl bg-rose-500/10 px-3 py-2 text-xs text-rose-800">{capture.error}</div>}
 
             <button onClick={reprocess} disabled={busy || !capture.image_path} className="btn-primary mt-4 w-full disabled:opacity-40">
               {busy ? <span className="inline-flex items-center">Working<LoadingDots /></span> : "Reprocess image"}
             </button>
             {!confirmDel ? (
               <button onClick={() => setConfirmDel(true)} disabled={busy}
-                className="btn mt-2 w-full border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 disabled:opacity-40">
+                className="btn mt-2 w-full border border-rose-500/30 text-rose-700 hover:bg-rose-500/10 disabled:opacity-40">
                 Delete capture
               </button>
             ) : (
@@ -85,7 +85,7 @@ export default function CaptureDetail({ capture, onClose }: { capture: Capture; 
                 <button onClick={() => setConfirmDel(false)} disabled={busy} className="btn-ghost">Cancel</button>
               </div>
             )}
-            {msg && <p className="mt-2 text-center text-xs text-white/40">{msg}</p>}
+            {msg && <p className="mt-2 text-center text-xs text-text-secondary">{msg}</p>}
           </div>
         </div>
       </motion.div>
