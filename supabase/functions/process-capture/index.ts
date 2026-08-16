@@ -24,6 +24,8 @@ const BUCKET = "captures";
 const MAX_WIDTH = 640; // downscale for speed; canopy ratio is scale-invariant
 const CANOPY_VALIDATOR_URL = Deno.env.get("CANOPY_VALIDATOR_URL");
 const CANOPY_VALIDATOR_TOKEN = Deno.env.get("CANOPY_VALIDATOR_TOKEN");
+const HUGGINGFACE_API_TOKEN = Deno.env.get("HUGGINGFACE_API_TOKEN");
+const CANOPY_VALIDATION_THRESHOLD = parseFloat(Deno.env.get("CANOPY_VALIDATION_THRESHOLD") ?? "0.55");
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -57,10 +59,70 @@ type ValidationResult = {
   rejection_reason: string | null;
 };
 
-/** Calls the long-running Python CLIP service before the Otsu calculation. */
+/** Performs CLIP validation using either Hugging Face Serverless API or custom Python server. */
 async function validateCanopyImage(bytes: Uint8Array): Promise<ValidationResult> {
+  if (HUGGINGFACE_API_TOKEN) {
+    const model = "openai/clip-vit-base-patch32";
+    const url = `https://api-inference.huggingface.co/models/${model}`;
+    
+    // Convert Uint8Array to base64
+    let binary = "";
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+
+    const labels = [
+      "a photo looking up through tree canopy at the sky",
+      "an unrelated or random photo",
+      "a photo of a person",
+      "a photo taken indoors",
+      "a blurry, dark, or unclear photo",
+    ];
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${HUGGINGFACE_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputs: {
+          image: base64,
+          candidate_labels: labels,
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Hugging Face validation failed: ${await response.text()}`);
+    }
+
+    const result = await response.json();
+    if (!Array.isArray(result) || result.length === 0) {
+      throw new Error("Invalid response format from Hugging Face Inference API");
+    }
+
+    const canopyLabel = "a photo looking up through tree canopy at the sky";
+    // Result is sorted by score desc: [ { label: "...", score: 0.8 }, ... ]
+    const bestResult = result[0];
+    const canopyResult = result.find((r: any) => r.label === canopyLabel);
+    
+    const predictedLabel = bestResult.label;
+    const confidence = canopyResult ? canopyResult.score : 0;
+    const valid = predictedLabel === canopyLabel && confidence > CANOPY_VALIDATION_THRESHOLD;
+
+    return {
+      valid,
+      confidence,
+      predicted_label: predictedLabel,
+      rejection_reason: valid ? null : "not a valid canopy image",
+    };
+  }
+
   if (!CANOPY_VALIDATOR_URL) {
-    throw new Error("CANOPY_VALIDATOR_URL is not configured");
+    throw new Error("Neither HUGGINGFACE_API_TOKEN nor CANOPY_VALIDATOR_URL is configured");
   }
   const form = new FormData();
   form.append("image", new Blob([bytes], { type: "image/jpeg" }), "capture.jpg");
@@ -70,6 +132,7 @@ async function validateCanopyImage(bytes: Uint8Array): Promise<ValidationResult>
   if (!response.ok) throw new Error(`canopy validation failed: ${await response.text()}`);
   return await response.json() as ValidationResult;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
