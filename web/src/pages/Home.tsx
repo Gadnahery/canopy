@@ -212,11 +212,9 @@ export default function Home() {
   const live = latest && activeStates.includes(latest.status);
   const connected = devices.some(isOnline);
   const image = latest?.image_path ? imageUrl(latest.image_path) : null;
-  const state = latest?.status === "invalid"
-    ? { label: "Image rejected", short: "Invalid", note: latest.error ?? "Not a valid canopy image.", tone: "text-warning" }
-    : live
-      ? { label: <span className="inline-flex items-center">Processing image<LoadingDots /></span>, short: "Processing", note: "CLIP validation & canopy coverage calculation are running.", tone: "text-warning animate-pulse" }
-      : density(latest?.canopy_pct);
+  const state = live
+    ? { label: <span className="inline-flex items-center">Processing image<LoadingDots /></span>, short: "Processing", note: "Canopy coverage calculation is running.", tone: "text-warning animate-pulse" }
+    : density(latest?.canopy_pct);
   const completed = latest?.status === "done";
 
   return <div className="space-y-5">

@@ -1,5 +1,5 @@
 export type CaptureStatus =
-  | "requested" | "uploading" | "uploaded" | "processing" | "done" | "invalid" | "error";
+  | "requested" | "uploading" | "uploaded" | "processing" | "done" | "error";
 
 export interface Capture {
   id: string;
@@ -14,8 +14,6 @@ export interface Capture {
   height: number | null;
   method: string | null;
   threshold: number | null;
-  validation_label: string | null;
-  validation_confidence: number | null;
   note: string | null;
   error: string | null;
   created_at: string;

@@ -6,7 +6,6 @@ const MAP: Record<CaptureStatus, { label: string; cls: string }> = {
   uploaded:   { label: "Uploaded",   cls: "bg-primary/10 text-primary" },
   processing: { label: "Processing", cls: "bg-warning/10 text-warning" },
   done:       { label: "Done",       cls: "bg-primary/10 text-primary" },
-  invalid:    { label: "Invalid image", cls: "bg-warning/10 text-warning" },
   error:      { label: "Error",      cls: "bg-error/10 text-error" },
 };
 

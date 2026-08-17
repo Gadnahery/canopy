@@ -1,5 +1,5 @@
 // ============================================================================
-// process-capture  — Supabase Edge Function (Deno)
+// process-capture  → Supabase Edge Function (Deno)
 //
 // Input  (POST JSON), either:
 //   { "device_id": "canopy-01", "image_path": "canopy-01/1699.jpg", "note"?: "" }
@@ -22,10 +22,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const BUCKET = "captures";
 const MAX_WIDTH = 640; // downscale for speed; canopy ratio is scale-invariant
-const CANOPY_VALIDATOR_URL = Deno.env.get("CANOPY_VALIDATOR_URL");
-const CANOPY_VALIDATOR_TOKEN = Deno.env.get("CANOPY_VALIDATOR_TOKEN");
-const HUGGINGFACE_API_TOKEN = Deno.env.get("HUGGINGFACE_API_TOKEN");
-const CANOPY_VALIDATION_THRESHOLD = parseFloat(Deno.env.get("CANOPY_VALIDATION_THRESHOLD") ?? "0.55");
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -33,15 +29,18 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Otsu's method: pick the threshold maximizing between-class variance.
 function otsu(hist: number[], total: number): number {
   let sum = 0;
-  for (let i = 0; i < 256; i++) sum += i * hist[i];
-  let sumB = 0, wB = 0, maxVar = -1, threshold = 127;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  let sumB = 0;
+  let wB = 0;
+  let wF = 0;
+  let maxVar = 0;
+  let threshold = 0;
   for (let t = 0; t < 256; t++) {
     wB += hist[t];
     if (wB === 0) continue;
-    const wF = total - wB;
+    wF = total - wB;
     if (wF === 0) break;
     sumB += t * hist[t];
     const mB = sumB / wB;
@@ -51,108 +50,6 @@ function otsu(hist: number[], total: number): number {
   }
   return threshold;
 }
-
-type ValidationResult = {
-  valid: boolean;
-  confidence: number;
-  predicted_label: string;
-  rejection_reason: string | null;
-};
-
-/** Performs CLIP validation using either Hugging Face Serverless API or custom Python server. */
-async function validateCanopyImage(bytes: Uint8Array): Promise<ValidationResult> {
-  if (HUGGINGFACE_API_TOKEN) {
-    const model = "openai/clip-vit-base-patch32";
-    const hostnames = [
-      "api-inference.huggingface.co",
-      "api.huggingface.co"
-    ];
-    
-    // Convert Uint8Array to base64
-    let binary = "";
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-
-    const labels = [
-      "a photo looking up through tree canopy at the sky",
-      "an unrelated or random photo",
-      "a photo of a person",
-      "a photo taken indoors",
-      "a blurry, dark, or unclear photo",
-    ];
-
-    let lastError = null;
-    let response: Response | null = null;
-
-    for (const host of hostnames) {
-      try {
-        const url = `https://${host}/models/${model}`;
-        response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${HUGGINGFACE_API_TOKEN}`,
-            "Content-Type": "application/json",
-            "x-wait-for-model": "true",
-          },
-          body: JSON.stringify({
-            inputs: {
-              image: base64,
-              candidate_labels: labels,
-            }
-          }),
-        });
-        if (response.ok) {
-          lastError = null;
-          break;
-        } else {
-          lastError = new Error(`Hugging Face validation failed on ${host}: ${await response.text()}`);
-        }
-      } catch (err) {
-        lastError = err;
-      }
-    }
-
-    if (lastError || !response) {
-      throw lastError || new Error("Failed to contact Hugging Face API");
-    }
-
-    const result = await response.json();
-    if (!Array.isArray(result) || result.length === 0) {
-      throw new Error("Invalid response format from Hugging Face Inference API");
-    }
-
-    const canopyLabel = "a photo looking up through tree canopy at the sky";
-    // Result is sorted by score desc: [ { label: "...", score: 0.8 }, ... ]
-    const bestResult = result[0];
-    const canopyResult = result.find((r: any) => r.label === canopyLabel);
-    
-    const predictedLabel = bestResult.label;
-    const confidence = canopyResult ? canopyResult.score : 0;
-    const valid = predictedLabel === canopyLabel && confidence > CANOPY_VALIDATION_THRESHOLD;
-
-    return {
-      valid,
-      confidence,
-      predicted_label: predictedLabel,
-      rejection_reason: valid ? null : "not a valid canopy image",
-    };
-  }
-
-  if (!CANOPY_VALIDATOR_URL) {
-    throw new Error("Neither HUGGINGFACE_API_TOKEN nor CANOPY_VALIDATOR_URL is configured");
-  }
-  const form = new FormData();
-  form.append("image", new Blob([bytes], { type: "image/jpeg" }), "capture.jpg");
-  const headers: HeadersInit = {};
-  if (CANOPY_VALIDATOR_TOKEN) headers.Authorization = `Bearer ${CANOPY_VALIDATOR_TOKEN}`;
-  const response = await fetch(CANOPY_VALIDATOR_URL, { method: "POST", headers, body: form });
-  if (!response.ok) throw new Error(`canopy validation failed: ${await response.text()}`);
-  return await response.json() as ValidationResult;
-}
-
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -194,31 +91,6 @@ Deno.serve(async (req) => {
     if (dlErr) throw dlErr;
     const bytes = new Uint8Array(await blob.arrayBuffer());
 
-    // Reject any non-canopy image before calculating a canopy percentage.
-    const validation = await validateCanopyImage(bytes);
-    if (!validation.valid) {
-      const rejectionReason = validation.rejection_reason ?? "not a valid canopy image";
-      const { data: rejected, error: rejectErr } = await db.from("captures").update({
-        status: "invalid",
-        canopy_pct: null,
-        leaf_pixels: null,
-        sky_pixels: null,
-        total_pixels: null,
-        width: null,
-        height: null,
-        method: "clip-validation",
-        threshold: null,
-        validation_label: validation.predicted_label,
-        validation_confidence: validation.confidence,
-        error: rejectionReason,
-        processed_at: new Date().toISOString(),
-      }).eq("id", captureId).select().single();
-      if (rejectErr) throw rejectErr;
-      return new Response(JSON.stringify({ ok: false, valid: false, error: rejectionReason, capture: rejected }), {
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
-    }
-
     // Decode + resize
     const decoded = await decode(bytes);
     const img = decoded instanceof Image ? decoded : decoded.frames[0];
@@ -247,8 +119,6 @@ Deno.serve(async (req) => {
       width, height,
       method: "clip+otsu-blue",
       threshold,
-      validation_label: validation.predicted_label,
-      validation_confidence: validation.confidence,
       error: null,
       processed_at: new Date().toISOString(),
     }).eq("id", captureId).select().single();
